@@ -15,7 +15,7 @@
     "dev:frontend": "npm -w frontend run dev",
     "build": "npm -w shared run build --if-present && npm -w backend run build --if-present && npm -w frontend run build --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm -w backend test",
+    "test": "npm -w backend test && npm -w frontend test",
     "db:migrate": "npm -w backend run db:migrate",
     "db:seed": "npm -w backend run db:seed"
   },

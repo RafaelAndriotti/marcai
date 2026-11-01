@@ -30,10 +30,6 @@ export const courtModel = {
     return toCourtDto(row);
   },
 
-  findById(id: string): Promise<DbCourt | null> {
-    return prisma.court.findUnique({ where: { id } });
-  },
-
   async listActiveIds(): Promise<string[]> {
     const rows = await prisma.court.findMany({ where: { active: true }, select: { id: true } });
     return rows.map((r) => r.id);

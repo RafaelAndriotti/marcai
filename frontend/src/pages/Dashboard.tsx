@@ -86,7 +86,7 @@ export function Dashboard() {
   const summary = useFetch(() => getDashboardSummary(), [])
   const courts = useFetch(getCourts, [])
   const bookings = useFetch(() => getBookings(day), [day])
-  const openOrders = useFetch(() => getOrders('OPEN'), [])
+  const openOrders = useFetch(() => getOrders({ status: 'OPEN' }), [])
 
   const activeCourts: Court[] = courts.data?.filter((c) => c.active) ?? []
   const live = bookings.data?.filter((b) => b.status !== 'CANCELLED') ?? []

@@ -18,8 +18,8 @@ export interface Booking {
 export const createBookingSchema = z
   .object({
     courtId: z.string().min(1),
-    customerName: z.string().trim().min(1),
-    customerPhone: z.string().trim().min(1),
+    customerName: z.string().trim().min(1).max(80),
+    customerPhone: z.string().trim().min(1).max(30),
     startsAt: z.iso.datetime({ offset: true }),
     endsAt: z.iso.datetime({ offset: true }),
   })

@@ -8,8 +8,8 @@ import { Skeleton } from '../components/Skeleton'
 import { StatusBadge } from '../components/StatusBadge'
 import { Tabs, type TabItem } from '../components/Tabs'
 import { useFetch } from '../hooks/useFetch'
-import { formatBRL, formatDateTime, plural } from '../lib/format'
-import { getOrders } from '../services/api'
+import { formatBRL, formatDateTime, plural, today } from '../lib/format'
+import { ApiError, getOrders, updateOrderStatus } from '../services/api'
 import { NewOrderModal } from './NewOrderModal'
 
 type Filter = 'ALL' | OrderStatus
@@ -27,9 +27,26 @@ function summary(o: Order): string {
   return o.items.map((i) => `${i.quantity}× ${i.productName}`).join(', ')
 }
 
-function Row({ o }: { o: Order }) {
+function Row({ o, onChanged }: { o: Order; onChanged: () => void }) {
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string>()
   const detailId = `order-${o.id}`
+
+  async function close(status: 'PAID' | 'CANCELLED') {
+    if (status === 'CANCELLED' && !window.confirm('Cancelar este pedido? Não dá para desfazer.')) return
+    setBusy(true)
+    setError(undefined)
+    try {
+      await updateOrderStatus(o.id, status)
+      onChanged()
+    } catch (e) {
+      // ORDER_NOT_OPEN: outra pessoa já fechou o pedido; recarrega para mostrar o status atual.
+      if (e instanceof ApiError && e.code === 'ORDER_NOT_OPEN') onChanged()
+      else setError(e instanceof ApiError ? e.message : 'Não foi possível mudar o status.')
+      setBusy(false)
+    }
+  }
   return (
     <li className="border-b border-line-soft">
       <div
@@ -75,17 +92,34 @@ function Row({ o }: { o: Order }) {
         </span>
       </div>
       {open && (
-        <ul id={detailId} className="mb-2 ml-9 mr-2 rounded-lg bg-surface-2 px-3 py-1">
-          {o.items.map((i) => (
-            <li key={i.id} className="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-3 py-1 text-sm">
-              <span className="truncate">
-                {i.quantity}× {i.productName}
-              </span>
-              <span className="text-muted">{formatBRL(i.unitPrice)} cada</span>
-              <span className="text-right">{formatBRL(i.subtotal)}</span>
-            </li>
-          ))}
-        </ul>
+        <div id={detailId} className="mb-2 ml-9 mr-2 rounded-lg bg-surface-2 px-3 py-1">
+          <ul>
+            {o.items.map((i) => (
+              <li key={i.id} className="grid grid-cols-[minmax(0,1fr)_auto_5rem] gap-3 py-1 text-sm">
+                <span className="truncate">
+                  {i.quantity}× {i.productName}
+                </span>
+                <span className="text-muted">{formatBRL(i.unitPrice)} cada</span>
+                <span className="text-right">{formatBRL(i.subtotal)}</span>
+              </li>
+            ))}
+          </ul>
+          {o.status === 'OPEN' && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-line-soft py-2">
+              <button type="button" className="btn-primary" disabled={busy} onClick={() => close('PAID')}>
+                Marcar pago
+              </button>
+              <button type="button" className="btn-ghost" disabled={busy} onClick={() => close('CANCELLED')}>
+                Cancelar pedido
+              </button>
+              {error && (
+                <p role="alert" className="text-xs text-danger-fg">
+                  {error}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
       )}
     </li>
   )
@@ -93,8 +127,9 @@ function Row({ o }: { o: Order }) {
 
 export function Orders() {
   const [filter, setFilter] = useState<Filter>('ALL')
-  // Busca todos uma vez: as contagens das abas vêm das linhas de cada visão.
-  const { data, error, loading, refetch } = useFetch(() => getOrders(), [])
+  const [date, setDate] = useState(today)
+  // Busca o dia todo uma vez: as contagens das abas vêm das linhas de cada visão.
+  const { data, error, loading, refetch } = useFetch(() => getOrders({ date }), [date])
   const [creating, setCreating] = useState(false)
 
   const count = (f: Filter) => (data ? data.filter((o) => f === 'ALL' || o.status === f).length : undefined)
@@ -122,10 +157,22 @@ export function Orders() {
         title="Pedidos"
         description={description ?? <Skeleton className="mt-1.5 h-4 w-48" />}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
-            <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
-            Novo pedido
-          </button>
+          <>
+            <label htmlFor="orders-date" className="sr-only">
+              Data
+            </label>
+            <input
+              id="orders-date"
+              type="date"
+              className="field-sm"
+              value={date}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+            />
+            <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+              <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              Novo pedido
+            </button>
+          </>
         }
       />
       <Tabs tabs={tabs} value={filter} onChange={setFilter} label="Status dos pedidos" panelId="orders-panel" />
@@ -158,14 +205,14 @@ export function Orders() {
             title="Nenhum pedido encontrado"
             description={
               filter === 'ALL'
-                ? 'Registre o primeiro pedido do bar.'
+                ? 'Nenhum pedido neste dia.'
                 : 'Escolha outra aba para ver os demais pedidos.'
             }
           />
         ) : (
           <ul>
             {rows.map((o) => (
-              <Row key={o.id} o={o} />
+              <Row key={o.id} o={o} onChanged={refetch} />
             ))}
           </ul>
         )}

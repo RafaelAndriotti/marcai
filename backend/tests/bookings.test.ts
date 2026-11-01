@@ -229,4 +229,12 @@ describe("PATCH /api/bookings/:id/status", () => {
     const res = await api().patch(`/api/bookings/${id}/status`).send({ status: "CANCELLED" });
     expect(res.status).toBe(200);
   });
+
+  it("recusa nome com mais de 80 caracteres", async () => {
+    const court = await makeCourt();
+    const res = await api()
+      .post("/api/bookings")
+      .send(bookingBody(court.id, "10:00", "11:00", { customerName: "x".repeat(81) }));
+    expect(res.status).toBe(400);
+  });
 });

@@ -39,7 +39,15 @@ export const createOrderSchema = z.object({
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
+export const updateOrderStatusSchema = z.object({
+  /** Só pedido OPEN muda de status, e só para PAID ou CANCELLED. */
+  status: z.enum(["PAID", "CANCELLED"]),
+});
+export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
+
 export const listOrdersQuerySchema = z.object({
   status: orderStatusSchema.optional(),
+  /** Dia local (YYYY-MM-DD) de criação do pedido. */
+  date: z.iso.date().optional(),
 });
 export type ListOrdersQuery = z.infer<typeof listOrdersQuerySchema>;

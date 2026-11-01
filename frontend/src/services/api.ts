@@ -8,7 +8,6 @@ import type {
   CreateProductInput,
   DashboardSummary,
   ErrorCode,
-  HealthStatus,
   Order,
   OrderStatus,
   Product,
@@ -73,7 +72,6 @@ function qs(params: Record<string, string | undefined>): string {
   return s ? `?${s}` : ''
 }
 
-export const getHealth = () => request<HealthStatus>('/health')
 export const getCourts = () => request<Court[]>('/courts')
 export const getBookings = (date: string, courtId?: string) =>
   request<Booking[]>(`/bookings${qs({ date, courtId })}`)
@@ -93,7 +91,13 @@ export const updateProduct = (id: string, input: UpdateProductInput) =>
     method: 'PATCH',
     body: JSON.stringify(input),
   })
-export const getOrders = (status?: OrderStatus) => request<Order[]>(`/orders${qs({ status })}`)
+export const getOrders = (filter: { status?: OrderStatus; date?: string } = {}) =>
+  request<Order[]>(`/orders${qs(filter)}`)
+export const updateOrderStatus = (id: string, status: 'PAID' | 'CANCELLED') =>
+  request<Order>(`/orders/${encodeURIComponent(id)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
 export const createOrder = (input: CreateOrderInput) =>
   request<Order>('/orders', { method: 'POST', body: JSON.stringify(input) })
 export const getDashboardSummary = (date?: string) =>

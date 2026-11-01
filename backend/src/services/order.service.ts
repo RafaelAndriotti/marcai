@@ -1,6 +1,13 @@
-import { MAX_MONEY, type CreateOrderInput, type ListOrdersQuery, type Order } from "@marcai/shared";
+import {
+  MAX_MONEY,
+  type CreateOrderInput,
+  type ListOrdersQuery,
+  type Order,
+  type UpdateOrderStatusInput,
+} from "@marcai/shared";
 import { Prisma, prisma } from "../config/prisma.js";
 import { orderModel } from "../models/order.model.js";
+import { localDayRange } from "../utils/date.js";
 import { AppError } from "../utils/errors.js";
 
 const ROUND = Prisma.Decimal.ROUND_HALF_UP;
@@ -10,7 +17,17 @@ const overflow = (): AppError => AppError.validation("total", "order total is to
 
 export const orderService = {
   list(query: ListOrdersQuery): Promise<Order[]> {
-    return orderModel.list(query.status);
+    return orderModel.list({
+      status: query.status,
+      range: query.date ? localDayRange(query.date) : undefined,
+    });
+  },
+
+  async updateStatus(id: string, status: UpdateOrderStatusInput["status"]): Promise<Order> {
+    const order = await orderModel.closeIfOpen(id, status);
+    if (order) return order;
+    if (!(await orderModel.exists(id))) throw AppError.notFound("Pedido não encontrado");
+    throw new AppError(409, "ORDER_NOT_OPEN", "Só pedidos abertos podem mudar de status");
   },
 
   create(input: CreateOrderInput): Promise<Order> {
@@ -20,6 +37,7 @@ export const orderService = {
       if (input.bookingId) {
         const booking = await tx.booking.findUnique({ where: { id: input.bookingId } });
         if (!booking) throw AppError.notFound("Reserva não encontrada");
+        if (booking.status === "CANCELLED") throw AppError.validation("bookingId", "booking is cancelled");
         customerName ??= booking.customerName;
       }
 

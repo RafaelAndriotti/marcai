@@ -1,7 +1,6 @@
 import type { Order, OrderStatus } from "@marcai/shared";
 import { prisma, type Prisma } from "../config/prisma.js";
-import type { Tx } from "./booking.model.js";
-import type { DayRange } from "./booking.model.js";
+import type { DayRange, Tx } from "./booking.model.js";
 
 type DbOrder = Prisma.OrderGetPayload<{ include: { items: true } }>;
 
@@ -38,9 +37,12 @@ export interface NewOrderData {
 }
 
 export const orderModel = {
-  async list(status?: OrderStatus): Promise<Order[]> {
+  async list(filter: { status?: OrderStatus; range?: DayRange }): Promise<Order[]> {
     const rows = await prisma.order.findMany({
-      where: status ? { status } : {},
+      where: {
+        ...(filter.status ? { status: filter.status } : {}),
+        ...(filter.range ? { createdAt: { gte: filter.range.start, lt: filter.range.end } } : {}),
+      },
       include: { items: { orderBy: { id: "asc" } } },
       orderBy: { createdAt: "desc" },
     });
@@ -58,6 +60,21 @@ export const orderModel = {
       include: { items: { orderBy: { id: "asc" } } },
     });
     return toOrderDto(row);
+  },
+
+  /** Muda o status só se o pedido ainda está OPEN (atômico). Devolve null se não mudou. */
+  async closeIfOpen(id: string, status: "PAID" | "CANCELLED"): Promise<Order | null> {
+    const { count } = await prisma.order.updateMany({ where: { id, status: "OPEN" }, data: { status } });
+    if (count === 0) return null;
+    const row = await prisma.order.findUniqueOrThrow({
+      where: { id },
+      include: { items: { orderBy: { id: "asc" } } },
+    });
+    return toOrderDto(row);
+  },
+
+  exists(id: string): Promise<boolean> {
+    return prisma.order.count({ where: { id } }).then((n) => n > 0);
   },
 
   countOpen(): Promise<number> {

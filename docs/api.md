@@ -43,6 +43,8 @@ Erro (`ApiErrorResponse`):
 | Produto inexistente em `POST /orders` | `NOT_FOUND` | `{ "productId": "<id>" }` |
 | Produto inexistente em `PATCH /products/:id` | `NOT_FOUND` | `{ "id": "<id>" }` |
 | Reserva inexistente (`bookingId` em `POST /orders`, `PATCH /bookings/:id/status`) | `NOT_FOUND` | ausente |
+| Pedido inexistente em `PATCH /orders/:id/status` | `NOT_FOUND` | ausente |
+| Pedido já pago ou cancelado em `PATCH /orders/:id/status` | `ORDER_NOT_OPEN` (409) | ausente |
 | Erro inesperado | `INTERNAL_ERROR` | `{ "requestId": "<id>" }` (para correlacionar com logs) |
 | Total do pedido acima de `MAX_MONEY` | `VALIDATION_ERROR` | `[{ "path": "total", "message": "order total is too large" }]` |
 | Overflow numérico no banco (backstop) | `VALIDATION_ERROR` (400) | lista de `ValidationIssue` |
@@ -80,8 +82,9 @@ Strings opacas.
 | GET | `/api/products` | Lista produtos (filtro `category`) | 200 |
 | POST | `/api/products` | Cria produto | 201 |
 | PATCH | `/api/products/:id` | Edita produto | 200 |
-| GET | `/api/orders` | Lista pedidos (filtro `status`) | 200 |
+| GET | `/api/orders` | Lista pedidos (filtros `status`, `date`) | 200 |
 | POST | `/api/orders` | Cria pedido | 201 |
+| PATCH | `/api/orders/:id/status` | Marca pedido pago ou cancelado | 200 |
 | GET | `/api/dashboard/summary` | Resumo do dia | 200 |
 
 Enums: `Sport` = `VOLEI | BEACH_TENNIS | FUTEVOLEI`; `BookingStatus` = `PENDING | CONFIRMED | CANCELLED | DONE`; `OrderStatus` = `OPEN | PAID | CANCELLED`; `ProductCategory` = `BEBIDA | COMIDA | OUTRO`.
@@ -162,8 +165,8 @@ Body (`createBookingSchema`):
 | Campo | Tipo | Regra |
 |---|---|---|
 | `courtId` | string | obrigatório; quadra deve existir |
-| `customerName` | string | obrigatório, trim |
-| `customerPhone` | string | obrigatório, trim |
+| `customerName` | string | obrigatório, trim, até 80 caracteres |
+| `customerPhone` | string | obrigatório, trim, até 30 caracteres |
 | `startsAt` | string | ISO 8601 com offset |
 | `endsAt` | string | ISO 8601 com offset |
 
@@ -260,7 +263,7 @@ Status: 200, 400 `VALIDATION_ERROR`, 404 `NOT_FOUND` (produto inexistente; `deta
 
 ### GET /api/orders
 
-Query (`listOrdersQuerySchema`): `status` (`OPEN | PAID | CANCELLED`, opcional). Ordenado por `createdAt` decrescente.
+Query (`listOrdersQuerySchema`): `status` (`OPEN | PAID | CANCELLED`, opcional); `date` (YYYY-MM-DD, opcional; dia local de criação em São Paulo). Ordenado por `createdAt` decrescente.
 
 Response 200:
 
@@ -285,7 +288,7 @@ Body (`createOrderSchema`):
 
 | Campo | Tipo | Regra |
 |---|---|---|
-| `bookingId` | string | opcional, até 64 caracteres; reserva deve existir |
+| `bookingId` | string | opcional, até 64 caracteres; reserva deve existir e não estar cancelada |
 | `customerName` | string | opcional, trim, 1 a 80 caracteres; se ausente e houver `bookingId`, usa o cliente da reserva; senão `null` |
 | `items` | array | 1 a 50 itens; `productId` não pode se repetir |
 | `items[].productId` | string | até 64 caracteres; produto existente e ativo |
@@ -297,7 +300,7 @@ Uso pela UI:
 
 - Avulso: enviar `customerName` sem `bookingId`. Vinculado: enviar `bookingId` (`customerName` opcional, herda da reserva). Os dois podem ser enviados juntos; `customerName` explícito prevalece. Sem nenhum dos dois, o pedido é criado com `customerName: null`.
 - `productId` duplicado em `items` é rejeitado com 400 `VALIDATION_ERROR` (`details.path = "items"`); o cliente deve somar as quantidades em um único item.
-- Não há alteração de status, inclusão de itens em pedido aberto nem forma de pagamento nesta entrega.
+- Não há inclusão de itens em pedido aberto nem forma de pagamento nesta entrega.
 
 Request:
 
@@ -307,7 +310,17 @@ Request:
 
 Response 201: objeto `Order` (como acima).
 
-Status: 201, 400 `VALIDATION_ERROR` (produto inativo: `details.path = "items[n].productId"`; total do pedido acima de `MAX_MONEY`: `details.path = "total"`, mensagem "order total is too large"), 404 `NOT_FOUND` (reserva sem `details`; produto com `details.productId`), 500.
+Status: 201, 400 `VALIDATION_ERROR` (reserva cancelada: `details.path = "bookingId"`; produto inativo: `details.path = "items[n].productId"`; total do pedido acima de `MAX_MONEY`: `details.path = "total"`, mensagem "order total is too large"), 404 `NOT_FOUND` (reserva sem `details`; produto com `details.productId`), 500.
+
+### PATCH /api/orders/:id/status
+
+Body (`updateOrderStatusSchema`): `{ "status": "PAID" }` ou `{ "status": "CANCELLED" }`. Só pedido `OPEN` muda; `PAID` e `CANCELLED` são finais.
+
+Response 200: `Order` atualizado.
+
+Status: 200, 400 `VALIDATION_ERROR` (status fora de `PAID | CANCELLED`), 404 `NOT_FOUND`, 409 `ORDER_NOT_OPEN`, 500.
+
+O faturamento do dashboard soma pedidos `PAID` pela data de **criação** do pedido.
 
 ### GET /api/dashboard/summary
 
@@ -371,6 +384,6 @@ Duas reservas conflitam se são da **mesma quadra**, ambas **não `CANCELLED`**,
 
 ## Helpers em `@marcai/shared`
 
-- `validateBookingInterval`, `BOOKING_DURATION`, `BUSINESS_HOURS`, `TIMEZONE`, `toLocalParts`, `todayLocalDate`
+- `validateBookingInterval`, `BOOKING_DURATION`, `BUSINESS_HOURS_MINUTES`, `TIMEZONE`, `toLocalParts`, `todayLocalDate`
 - `moneySchema`, `roundMoney`
 - `ApiResponse`, `ApiListResponse`, `ApiErrorResponse`, `ValidationIssue`, `HealthStatus`

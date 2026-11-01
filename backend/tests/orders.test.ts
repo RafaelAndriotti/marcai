@@ -228,4 +228,62 @@ describe("products", () => {
     expect(res.body.data.map((p: { name: string }) => p.name)).toEqual(["A", "B"]);
     expect(res.body.data[1].price).toBe(7.5);
   });
+
+  describe("PATCH /api/orders/:id/status", () => {
+    async function newOrder() {
+      const p = await makeProduct({ price: "5.00" });
+      const res = await api().post("/api/orders").send({ items: [{ productId: p.id, quantity: 2 }] });
+      return res.body.data.id as string;
+    }
+
+    it("marca pago e o total entra no faturamento do dia", async () => {
+      const id = await newOrder();
+      const res = await api().patch(`/api/orders/${id}/status`).send({ status: "PAID" });
+      expect(res.status).toBe(200);
+      expect(res.body.data).toMatchObject({ id, status: "PAID", total: 10 });
+      const summary = await api().get("/api/dashboard/summary");
+      expect(summary.body.data).toMatchObject({ revenue: 10, openOrdersCount: 0 });
+    });
+
+    it("pedido já fechado devolve 409 ORDER_NOT_OPEN", async () => {
+      const id = await newOrder();
+      await api().patch(`/api/orders/${id}/status`).send({ status: "CANCELLED" });
+      const res = await api().patch(`/api/orders/${id}/status`).send({ status: "PAID" });
+      expect(res.status).toBe(409);
+      expect(res.body.error.code).toBe("ORDER_NOT_OPEN");
+    });
+
+    it("pedido inexistente devolve 404; status OPEN é recusado", async () => {
+      const missing = await api().patch("/api/orders/nao-existe/status").send({ status: "PAID" });
+      expect(missing.status).toBe(404);
+      const id = await newOrder();
+      const reopen = await api().patch(`/api/orders/${id}/status`).send({ status: "OPEN" });
+      expect(reopen.status).toBe(400);
+    });
+  });
+
+  it("GET ?date= filtra pelo dia local de criação", async () => {
+    const p = await makeProduct();
+    const created = await api().post("/api/orders").send({ items: [{ productId: p.id, quantity: 1 }] });
+    await prisma.order.update({
+      where: { id: created.body.data.id },
+      data: { createdAt: new Date("2027-03-10T02:30:00Z") }, // 09/03 23:30 em São Paulo
+    });
+    const day9 = await api().get("/api/orders?date=2027-03-09");
+    const day10 = await api().get("/api/orders?date=2027-03-10");
+    expect(day9.body.data.map((o: { id: string }) => o.id)).toEqual([created.body.data.id]);
+    expect(day10.body.data).toEqual([]);
+  });
+
+  it("recusa pedido ligado a reserva cancelada", async () => {
+    const court = await makeCourt();
+    const p = await makeProduct();
+    const b = await api().post("/api/bookings").send(bookingBody(court.id, "10:00", "11:00"));
+    await api().patch(`/api/bookings/${b.body.data.id}/status`).send({ status: "CANCELLED" });
+    const res = await api()
+      .post("/api/orders")
+      .send({ bookingId: b.body.data.id, items: [{ productId: p.id, quantity: 1 }] });
+    expect(res.status).toBe(400);
+    expect(res.body.error.details[0].path).toBe("bookingId");
+  });
 });
