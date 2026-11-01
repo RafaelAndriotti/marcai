@@ -1,0 +1,89 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Sport {
+  VOLEI
+  BEACH_TENNIS
+  FUTEVOLEI
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  DONE
+}
+
+enum OrderStatus {
+  OPEN
+  PAID
+  CANCELLED
+}
+
+model Court {
+  id           String    @id @default(cuid())
+  name         String
+  sport        Sport
+  pricePerHour Decimal   @db.Decimal(10, 2)
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  bookings     Booking[]
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  courtId       String
+  court         Court         @relation(fields: [courtId], references: [id])
+  customerName  String
+  customerPhone String
+  startsAt      DateTime
+  endsAt        DateTime
+  status        BookingStatus @default(PENDING)
+  price         Decimal       @db.Decimal(10, 2)
+  createdAt     DateTime      @default(now())
+  orders        Order[]
+
+  @@index([courtId, startsAt])
+  @@index([startsAt])
+}
+
+model Product {
+  id         String      @id @default(cuid())
+  name       String
+  price      Decimal     @db.Decimal(10, 2)
+  active     Boolean     @default(true)
+  createdAt  DateTime    @default(now())
+  orderItems OrderItem[]
+}
+
+model Order {
+  id           String      @id @default(cuid())
+  bookingId    String?
+  booking      Booking?    @relation(fields: [bookingId], references: [id])
+  customerName String?
+  status       OrderStatus @default(OPEN)
+  total        Decimal     @db.Decimal(10, 2)
+  createdAt    DateTime    @default(now())
+  items        OrderItem[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id          String  @id @default(cuid())
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Int
+  unitPrice   Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+}

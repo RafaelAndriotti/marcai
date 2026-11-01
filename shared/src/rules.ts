@@ -1,0 +1,64 @@
+/** Regras de negócio compartilhadas (backend valida, frontend pode pré-validar). */
+
+export const TIMEZONE = "America/Sao_Paulo";
+
+/** Horário de funcionamento, em hora local de TIMEZONE. */
+export const BUSINESS_HOURS = { open: "07:00", close: "23:00" } as const;
+export const BUSINESS_HOURS_MINUTES = { open: 7 * 60, close: 23 * 60 } as const;
+/** Horas funcionais por dia (usado no occupancyRate). */
+export const BUSINESS_HOURS_PER_DAY = 16;
+
+export const BOOKING_DURATION = {
+  minMinutes: 30,
+  stepMinutes: 30,
+  maxMinutes: 240,
+} as const;
+
+const localFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: TIMEZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+/** Data (YYYY-MM-DD) e minutos desde 00:00 locais em America/Sao_Paulo. */
+export function toLocalParts(d: Date): { date: string; minutes: number } {
+  const p: Record<string, string> = {};
+  for (const part of localFormatter.formatToParts(d)) p[part.type] = part.value;
+  return {
+    date: `${p.year}-${p.month}-${p.day}`,
+    minutes: Number(p.hour) * 60 + Number(p.minute),
+  };
+}
+
+/** Dia local atual (YYYY-MM-DD) em America/Sao_Paulo. */
+export function todayLocalDate(now: Date = new Date()): string {
+  return toLocalParts(now).date;
+}
+
+/** Retorna mensagem de erro ou null se o intervalo é uma reserva válida. */
+export function validateBookingInterval(startsAt: string, endsAt: string): string | null {
+  const s = new Date(startsAt);
+  const e = new Date(endsAt);
+  const durationMin = (e.getTime() - s.getTime()) / 60_000;
+  if (!(durationMin > 0)) return "endsAt must be after startsAt";
+  if (durationMin < BOOKING_DURATION.minMinutes) return "duration must be at least 30 minutes";
+  if (durationMin > BOOKING_DURATION.maxMinutes) return "duration must be at most 4 hours";
+  if (durationMin % BOOKING_DURATION.stepMinutes !== 0) {
+    return "duration must be a multiple of 30 minutes";
+  }
+  if (s.getTime() % 60_000 !== 0) return "startsAt must have zero seconds and milliseconds";
+  const ls = toLocalParts(s);
+  if (ls.minutes % BOOKING_DURATION.stepMinutes !== 0) {
+    return "startsAt must be on a 30-minute boundary (:00 or :30)";
+  }
+  const le = toLocalParts(e);
+  if (ls.date !== le.date) return "booking must start and end on the same local day";
+  if (ls.minutes < BUSINESS_HOURS_MINUTES.open || le.minutes > BUSINESS_HOURS_MINUTES.close) {
+    return "booking must be within business hours (07:00-23:00)";
+  }
+  return null;
+}
