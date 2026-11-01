@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { productCategorySchema, type ProductCategory } from "./enums.js";
-import { moneySchema, roundMoney } from "./money.js";
+import { moneySchema } from "./money.js";
 
 export interface Product {
   id: string;
@@ -28,11 +28,7 @@ const productNameSchema = z
       }),
   );
 /** Preço de venda: reais, até 2 casas, 0.01 a MAX_PRODUCT_PRICE. */
-const productPriceSchema = moneySchema
-  .refine((v) => roundMoney(v) > 0, { message: "must be greater than 0" })
-  .refine((v) => v <= MAX_PRODUCT_PRICE, {
-    message: `must be at most ${MAX_PRODUCT_PRICE}`,
-  });
+const productPriceSchema = moneySchema.positive().max(MAX_PRODUCT_PRICE);
 
 export const createProductSchema = z.object({
   name: productNameSchema,

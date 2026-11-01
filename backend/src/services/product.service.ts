@@ -1,19 +1,10 @@
 import type { CreateProductInput, Product, UpdateProductInput } from "@marcai/shared";
 import { productModel } from "../models/product.model.js";
-import { AppError } from "../utils/errors.js";
+import { AppError, pgCode } from "../utils/errors.js";
 
-/** Violação de unicidade: P2002 do Prisma ou 23505 do driver (adapter-pg). */
-function isUniqueViolation(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const e = err as { code?: unknown; meta?: { driverAdapterError?: { cause?: { originalCode?: unknown } } }; cause?: { originalCode?: unknown; code?: unknown } };
-  return (
-    e.code === "P2002" ||
-    e.code === "23505" ||
-    e.cause?.originalCode === "23505" ||
-    e.cause?.code === "23505" ||
-    e.meta?.driverAdapterError?.cause?.originalCode === "23505"
-  );
-}
+/** Violação de unicidade: P2002 do Prisma ou 23505 do Postgres. */
+const isUniqueViolation = (err: unknown): boolean =>
+  (err as { code?: unknown } | null)?.code === "P2002" || pgCode(err) === "23505";
 
 /** Forma canônica do nome: trim + NFC (igual ao schema compartilhado). */
 function canonicalName(name: string): string {
@@ -35,7 +26,6 @@ export const productService = {
   },
 
   async update(id: string, input: UpdateProductInput): Promise<Product> {
-    if (!(await productModel.findById(id))) throw AppError.notFound("Produto não encontrado", { id });
     const data = input.name !== undefined ? { ...input, name: canonicalName(input.name) } : input;
     try {
       return await productModel.update(id, data);

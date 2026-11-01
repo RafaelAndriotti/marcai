@@ -1,22 +1,7 @@
 import { randomBytes } from "node:crypto";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import type { ApiErrorResponse } from "@marcai/shared";
-import { AppError } from "../utils/errors.js";
-
-function isNumericOverflow(err: unknown): boolean {
-  if (typeof err !== "object" || err === null) return false;
-  const e = err as {
-    code?: unknown;
-    cause?: { originalCode?: unknown; code?: unknown };
-    meta?: { driverAdapterError?: { cause?: { originalCode?: unknown } } };
-  };
-  return (
-    e.code === "22003" ||
-    e.cause?.originalCode === "22003" ||
-    e.cause?.code === "22003" ||
-    e.meta?.driverAdapterError?.cause?.originalCode === "22003"
-  );
-}
+import { AppError, pgCode } from "../utils/errors.js";
 
 export const notFoundHandler: RequestHandler = (_req, _res, next) => {
   next(AppError.notFound("Rota não encontrada"));
@@ -62,7 +47,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     // outros erros 4xx do body-parser (ex. payload grande, charset)
     status = 400;
     body = { error: { code: "VALIDATION_ERROR", message: "Requisição inválida" } };
-  } else if (isNumericOverflow(err)) {
+  } else if (pgCode(err) === "22003") {
     // Postgres 22003 (numeric_value_out_of_range)
     status = 400;
     body = {

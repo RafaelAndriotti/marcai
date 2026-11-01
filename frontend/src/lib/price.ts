@@ -4,11 +4,11 @@ const clean = (raw: string): string => raw.trim().replace(/^R\$\s*/i, '').trim()
 
 /**
  * Lê um preço digitado em pt-BR ("12,50", "12.5", "R$ 8"). Devolve reais ou undefined se inválido.
- * Milhar não é aceito, para não confundir "1.250" com 1,25. Zeros além da 2ª casa ("12,500") são aceitos.
+ * Até 2 casas depois do separador: assim "1.250" (milhar) é recusado em vez de virar 1,25.
  */
 export function parsePrice(raw: string): number | undefined {
   const s = clean(raw)
-  if (!/^\d+([.,]\d+)?$/.test(s)) return undefined
+  if (!/^\d+([.,]\d{1,2})?$/.test(s)) return undefined
   return Number(s.replace(',', '.'))
 }
 
@@ -21,7 +21,6 @@ export function priceError(raw: string): string {
   if (n === undefined) return 'Use só números, com vírgula para os centavos. Exemplo: 12,50.'
   if (n <= 0) return 'O preço deve ser maior que zero.'
   if (n > MAX_PRODUCT_PRICE) return 'O preço deve ser de no máximo R$ 100.000,00.'
-  if (Math.abs(Math.round(n * 100) - n * 100) > 1e-6) return 'Use no máximo 2 casas decimais.'
   return ''
 }
 

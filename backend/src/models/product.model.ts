@@ -22,10 +22,6 @@ export const productModel = {
     return toProductDto(row);
   },
 
-  findById(id: string): Promise<DbProduct | null> {
-    return prisma.product.findUnique({ where: { id } });
-  },
-
   async update(id: string, input: UpdateProductInput): Promise<Product> {
     const row = await prisma.product.update({
       where: { id },
@@ -37,9 +33,5 @@ export const productModel = {
       },
     });
     return toProductDto(row);
-  },
-
-  findManyByIds(ids: string[]): Promise<DbProduct[]> {
-    return prisma.product.findMany({ where: { id: { in: ids } } });
   },
 };
