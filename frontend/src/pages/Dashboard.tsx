@@ -24,6 +24,7 @@ import {
 } from '../lib/format'
 import { getBookings, getCourts, getDashboardSummary, getOrders } from '../services/api'
 import { NewBookingModal } from './NewBookingModal'
+import { NewOrderModal } from './NewOrderModal'
 
 const OPEN = 7 * 60
 const CLOSE = 23 * 60
@@ -90,6 +91,8 @@ export function Dashboard() {
   const activeCourts: Court[] = courts.data?.filter((c) => c.active) ?? []
   const live = bookings.data?.filter((b) => b.status !== 'CANCELLED') ?? []
   const s = summary.data
+
+  const [ordering, setOrdering] = useState(false)
 
   function refetchAll() {
     summary.refetch()
@@ -293,11 +296,16 @@ export function Dashboard() {
           <Section
             title="Pedidos abertos"
             aside={
-              openOrders.data && (
-                <span className="text-xs text-muted">
-                  {openOrders.data.length} {plural(openOrders.data.length, 'pedido', 'pedidos')}
-                </span>
-              )
+              <span className="flex items-center gap-3">
+                {openOrders.data && (
+                  <span className="text-xs text-muted">
+                    {openOrders.data.length} {plural(openOrders.data.length, 'pedido', 'pedidos')}
+                  </span>
+                )}
+                <button type="button" className="btn-text" onClick={() => setOrdering(true)}>
+                  Novo pedido
+                </button>
+              </span>
             }
           >
             {openOrders.error ? (
@@ -353,6 +361,15 @@ export function Dashboard() {
           onClose={() => setCreating(false)}
           onCreated={() => {
             setCreating(false)
+            refetchAll()
+          }}
+        />
+      )}
+      {ordering && (
+        <NewOrderModal
+          onClose={() => setOrdering(false)}
+          onCreated={() => {
+            setOrdering(false)
             refetchAll()
           }}
         />

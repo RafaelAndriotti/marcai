@@ -26,6 +26,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+enum ProductCategory {
+  BEBIDA
+  COMIDA
+  OUTRO
+}
+
 model Court {
   id           String    @id @default(cuid())
   name         String
@@ -54,12 +60,16 @@ model Booking {
 }
 
 model Product {
-  id         String      @id @default(cuid())
+  id         String          @id @default(cuid())
   name       String
-  price      Decimal     @db.Decimal(10, 2)
-  active     Boolean     @default(true)
-  createdAt  DateTime    @default(now())
+  price      Decimal         @db.Decimal(10, 2)
+  category   ProductCategory @default(OUTRO)
+  active     Boolean         @default(true)
+  createdAt  DateTime        @default(now())
   orderItems OrderItem[]
+
+  // Unicidade case-insensitive: índice único em lower(name) criado via SQL na migration
+  // product_category (Prisma não modela índices de expressão).
 }
 
 model Order {

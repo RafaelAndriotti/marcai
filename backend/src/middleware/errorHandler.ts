@@ -1,9 +1,25 @@
+import { randomBytes } from "node:crypto";
 import type { ErrorRequestHandler, RequestHandler } from "express";
 import type { ApiErrorResponse } from "@marcai/shared";
 import { AppError } from "../utils/errors.js";
 
-export const notFoundHandler: RequestHandler = (req, _res, next) => {
-  next(AppError.notFound(`Rota não encontrada: ${req.method} ${req.path}`));
+function isNumericOverflow(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as {
+    code?: unknown;
+    cause?: { originalCode?: unknown; code?: unknown };
+    meta?: { driverAdapterError?: { cause?: { originalCode?: unknown } } };
+  };
+  return (
+    e.code === "22003" ||
+    e.cause?.originalCode === "22003" ||
+    e.cause?.code === "22003" ||
+    e.meta?.driverAdapterError?.cause?.originalCode === "22003"
+  );
+}
+
+export const notFoundHandler: RequestHandler = (_req, _res, next) => {
+  next(AppError.notFound("Rota não encontrada"));
 };
 
 export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
@@ -46,8 +62,27 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, next) => {
     // outros erros 4xx do body-parser (ex. payload grande, charset)
     status = 400;
     body = { error: { code: "VALIDATION_ERROR", message: "Requisição inválida" } };
+  } else if (isNumericOverflow(err)) {
+    // Postgres 22003 (numeric_value_out_of_range)
+    status = 400;
+    body = {
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Dados inválidos",
+        details: [{ path: "", message: "numeric value out of range" }],
+      },
+    };
   } else {
-    console.error(err);
+    const requestId = randomBytes(4).toString("hex");
+    // stack completo só no log do servidor; a resposta fica sanitizada
+    const detail =
+      err instanceof Error
+        ? `${err.stack ?? `${err.name}: ${err.message}`}${"code" in err ? ` (code=${String(err.code)})` : ""}`
+        : String(err);
+    console.error(`[${requestId}] ${detail}`);
+    body = {
+      error: { ...body.error, details: { requestId } },
+    };
   }
 
   res.status(status).json(body);

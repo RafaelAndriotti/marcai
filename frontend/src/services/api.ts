@@ -5,12 +5,15 @@ import type {
   Court,
   CreateBookingInput,
   CreateOrderInput,
+  CreateProductInput,
   DashboardSummary,
   ErrorCode,
   HealthStatus,
   Order,
   OrderStatus,
   Product,
+  ProductCategory,
+  UpdateProductInput,
 } from '@marcai/shared'
 
 const BASE = '/api'
@@ -81,7 +84,15 @@ export const updateBookingStatus = (id: string, status: BookingStatus) =>
     method: 'PATCH',
     body: JSON.stringify({ status }),
   })
-export const getProducts = () => request<Product[]>('/products')
+export const getProducts = (category?: ProductCategory) =>
+  request<Product[]>(`/products${qs({ category })}`)
+export const createProduct = (input: CreateProductInput) =>
+  request<Product>('/products', { method: 'POST', body: JSON.stringify(input) })
+export const updateProduct = (id: string, input: UpdateProductInput) =>
+  request<Product>(`/products/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input),
+  })
 export const getOrders = (status?: OrderStatus) => request<Order[]>(`/orders${qs({ status })}`)
 export const createOrder = (input: CreateOrderInput) =>
   request<Order>('/orders', { method: 'POST', body: JSON.stringify(input) })

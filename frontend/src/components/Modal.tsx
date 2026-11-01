@@ -5,10 +5,11 @@ interface Props {
   title: string
   onClose: () => void
   children: ReactNode
+  wide?: boolean
 }
 
 /** Modal sobre <dialog> nativo: foco preso, Esc fecha, restaura foco. */
-export function Modal({ title, onClose, children }: Props) {
+export function Modal({ title, onClose, children, wide }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export function Modal({ title, onClose, children }: Props) {
       onClick={(e) => {
         if (e.target === ref.current) onClose()
       }}
-      className="m-auto w-[calc(100%-2rem)] max-w-lg rounded-lg border border-line bg-surface p-0 text-fg shadow-xl backdrop:bg-slate-950/60"
+      className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${wide ? 'max-w-2xl' : 'max-w-lg'} overflow-y-auto rounded-lg border border-line bg-surface p-0 text-fg shadow-xl backdrop:bg-slate-950/60`}
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-3">
         <h2 id="modal-title" className="text-base font-semibold">

@@ -31,7 +31,26 @@ Erro (`ApiErrorResponse`):
 | `VALIDATION_ERROR` | 400 | body/query/param inválido |
 | `NOT_FOUND` | 404 | recurso (ou rota) inexistente |
 | `BOOKING_CONFLICT` | 409 | reserva sobrepõe outra não cancelada na mesma quadra |
+| `PRODUCT_NAME_TAKEN` | 409 | já existe produto com esse nome (case-insensitive) |
 | `INTERNAL_ERROR` | 500 | erro inesperado |
+
+### `details` em outros erros
+
+`details` não é só lista de `ValidationIssue`. Formas usadas:
+
+| Situação | Código | `details` |
+|---|---|---|
+| Produto inexistente em `POST /orders` | `NOT_FOUND` | `{ "productId": "<id>" }` |
+| Produto inexistente em `PATCH /products/:id` | `NOT_FOUND` | `{ "id": "<id>" }` |
+| Reserva inexistente (`bookingId` em `POST /orders`, `PATCH /bookings/:id/status`) | `NOT_FOUND` | ausente |
+| Erro inesperado | `INTERNAL_ERROR` | `{ "requestId": "<id>" }` (para correlacionar com logs) |
+| Total do pedido acima de `MAX_MONEY` | `VALIDATION_ERROR` | `[{ "path": "total", "message": "order total is too large" }]` |
+| Overflow numérico no banco (backstop) | `VALIDATION_ERROR` (400) | lista de `ValidationIssue` |
+
+### Segurança
+
+- Body JSON limitado a 16 kb (excedente rejeitado pelo parser de body).
+- Respostas incluem cabeçalhos de segurança HTTP.
 
 ### Datas e timezone
 
@@ -42,7 +61,7 @@ Erro (`ApiErrorResponse`):
 
 ### Dinheiro
 
-Reais como `number` com no máximo 2 casas (ex. `120.5`). Nunca centavos. Entrada com mais de 2 casas é rejeitada.
+Reais como `number` com no máximo 2 casas (ex. `120.5`). Nunca centavos. Entrada com mais de 2 casas é rejeitada (comparação estrita, ex. `0.010000001` é inválido). Máximo `99999999.99` (`MAX_MONEY`; vale também para `pricePerHour`).
 
 ### IDs
 
@@ -58,12 +77,14 @@ Strings opacas.
 | GET | `/api/bookings` | Lista reservas (filtros `date`, `courtId`) | 200 |
 | POST | `/api/bookings` | Cria reserva | 201 |
 | PATCH | `/api/bookings/:id/status` | Altera status da reserva | 200 |
-| GET | `/api/products` | Lista produtos | 200 |
+| GET | `/api/products` | Lista produtos (filtro `category`) | 200 |
+| POST | `/api/products` | Cria produto | 201 |
+| PATCH | `/api/products/:id` | Edita produto | 200 |
 | GET | `/api/orders` | Lista pedidos (filtro `status`) | 200 |
 | POST | `/api/orders` | Cria pedido | 201 |
 | GET | `/api/dashboard/summary` | Resumo do dia | 200 |
 
-Enums: `Sport` = `VOLEI | BEACH_TENNIS | FUTEVOLEI`; `BookingStatus` = `PENDING | CONFIRMED | CANCELLED | DONE`; `OrderStatus` = `OPEN | PAID | CANCELLED`.
+Enums: `Sport` = `VOLEI | BEACH_TENNIS | FUTEVOLEI`; `BookingStatus` = `PENDING | CONFIRMED | CANCELLED | DONE`; `OrderStatus` = `OPEN | PAID | CANCELLED`; `ProductCategory` = `BEBIDA | COMIDA | OUTRO`.
 
 ---
 
@@ -187,13 +208,55 @@ Status: 200, 400 `VALIDATION_ERROR`, 404 `NOT_FOUND`, 409 `BOOKING_CONFLICT`, 50
 
 ### GET /api/products
 
-Lista produtos do bar, ordenados por nome. Inclui inativos (`active: false`); o cliente deve oferecer só ativos.
+Query (`listProductsQuerySchema`): `category` (`BEBIDA | COMIDA | OUTRO`, opcional). Ordenado por nome. Inclui inativos (`active: false`); o cliente deve oferecer só ativos.
 
 ```json
-{ "data": [ { "id": "p1", "name": "Água 500ml", "price": 5, "active": true } ] }
+{ "data": [ { "id": "p1", "name": "Água 500ml", "price": 5, "category": "BEBIDA", "active": true } ] }
 ```
 
-Status: 200, 500.
+Status: 200, 400 `VALIDATION_ERROR` (category inválida), 500.
+
+### POST /api/products
+
+Body (`createProductSchema`):
+
+| Campo | Tipo | Regra |
+|---|---|---|
+| `name` | string | obrigatório, normalizado para Unicode NFC e depois trim, 1 a 80 caracteres (limite vale para o nome normalizado); sem caracteres de controle ou de formatação invisíveis (`\p{Cc}`, `\p{Cf}`); único (ver abaixo) |
+| `price` | number | obrigatório, de `0.01` a `100000` (`MAX_PRODUCT_PRICE`), até 2 casas |
+| `category` | ProductCategory | obrigatório |
+
+Produto criado com `active: true`. Não há controle de estoque.
+
+Request:
+
+```json
+{ "name": "Isotônico", "price": 7.5, "category": "BEBIDA" }
+```
+
+Response 201: `{ "data": { "id": "p2", "name": "Isotônico", "price": 7.5, "category": "BEBIDA", "active": true } }`
+
+Nome duplicado, response 409:
+
+```json
+{ "error": { "code": "PRODUCT_NAME_TAKEN", "message": "Já existe um produto com este nome" } }
+```
+
+Status: 201, 400 `VALIDATION_ERROR`, 409 `PRODUCT_NAME_TAKEN`, 500.
+
+### PATCH /api/products/:id
+
+Body (`updateProductSchema`): qualquer subconjunto de `name`, `price`, `category`, `active`, com as mesmas regras do POST. Ao menos um campo é obrigatório (body vazio = 400 `VALIDATION_ERROR`). Campos ausentes não mudam.
+
+`active` é aceito no PATCH por ser trivial, mas a UI desta entrega não o expõe.
+
+Request: `{ "price": 8 }`
+
+Response 200: `Product` atualizado.
+
+Alterar `price` **não** altera pedidos existentes: `OrderItem.unitPrice` é copiado na criação do pedido.
+
+Status: 200, 400 `VALIDATION_ERROR`, 404 `NOT_FOUND` (produto inexistente; `details.id`), 409 `PRODUCT_NAME_TAKEN` (novo nome já usado por outro produto; renomear para o próprio nome ou mudar só caixa do próprio nome é permitido), 500.
 
 ### GET /api/orders
 
@@ -222,13 +285,19 @@ Body (`createOrderSchema`):
 
 | Campo | Tipo | Regra |
 |---|---|---|
-| `bookingId` | string | opcional; reserva deve existir |
-| `customerName` | string | opcional; se ausente e houver `bookingId`, usa o cliente da reserva; senão `null` |
-| `items` | array | 1 a 50 itens |
-| `items[].productId` | string | produto existente e ativo |
+| `bookingId` | string | opcional, até 64 caracteres; reserva deve existir |
+| `customerName` | string | opcional, trim, 1 a 80 caracteres; se ausente e houver `bookingId`, usa o cliente da reserva; senão `null` |
+| `items` | array | 1 a 50 itens; `productId` não pode se repetir |
+| `items[].productId` | string | até 64 caracteres; produto existente e ativo |
 | `items[].quantity` | integer | 1 a 999 |
 
 `unitPrice` é copiado do produto no momento do pedido (mudança futura de preço não altera pedidos antigos). `subtotal = unitPrice * quantity`; `total` = soma dos subtotais, 2 casas. Status inicial `OPEN`. Preço/total enviados pelo cliente são ignorados.
+
+Uso pela UI:
+
+- Avulso: enviar `customerName` sem `bookingId`. Vinculado: enviar `bookingId` (`customerName` opcional, herda da reserva). Os dois podem ser enviados juntos; `customerName` explícito prevalece. Sem nenhum dos dois, o pedido é criado com `customerName: null`.
+- `productId` duplicado em `items` é rejeitado com 400 `VALIDATION_ERROR` (`details.path = "items"`); o cliente deve somar as quantidades em um único item.
+- Não há alteração de status, inclusão de itens em pedido aberto nem forma de pagamento nesta entrega.
 
 Request:
 
@@ -238,7 +307,7 @@ Request:
 
 Response 201: objeto `Order` (como acima).
 
-Status: 201, 400 `VALIDATION_ERROR` (produto inativo: `details.path = "items[n].productId"`), 404 `NOT_FOUND` (reserva ou produto inexistente), 500.
+Status: 201, 400 `VALIDATION_ERROR` (produto inativo: `details.path = "items[n].productId"`; total do pedido acima de `MAX_MONEY`: `details.path = "total"`, mensagem "order total is too large"), 404 `NOT_FOUND` (reserva sem `details`; produto com `details.productId`), 500.
 
 ### GET /api/dashboard/summary
 
@@ -284,12 +353,21 @@ Duas reservas conflitam se são da **mesma quadra**, ambas **não `CANCELLED`**,
 ### Cálculo de valores
 
 - `Booking.price = Court.pricePerHour * (duração em minutos / 60)`, arredondado a 2 casas.
-- `OrderItem.unitPrice` = `Product.price` no momento da criação; `subtotal = unitPrice * quantity`; `Order.total = soma(subtotal)`.
+- `OrderItem.unitPrice` = `Product.price` no momento da criação (editar o preço depois não afeta pedidos já feitos); `subtotal = unitPrice * quantity`; `Order.total = soma(subtotal)`.
 
 ### Dashboard
 
 - `revenue` = soma de `price` das reservas `CONFIRMED` ou `DONE` do dia local + soma de `total` dos pedidos `PAID` do dia local (por `createdAt`).
 - `occupancyRate` = horas reservadas não canceladas no dia / (quadras ativas × 16 h). Sem quadras ativas = `0`. Limitado a 1.
+
+### Produtos
+
+- Nome único, comparação case-insensitive após trim (`Água` e `água` colidem) → 409 `PRODUCT_NAME_TAKEN`. Aplica-se também a produtos inativos.
+- Categorias: `BEBIDA`, `COMIDA`, `OUTRO` (rótulos em `PRODUCT_CATEGORY_LABELS`).
+- Sem controle de estoque.
+- Deploy: o índice único de nome usa `lower(name)` e exige banco com locale UTF-8 (ex. `en_US.utf8`). Com locale `C`/`POSIX`, letras não ASCII não são convertidas para minúsculas e a unicidade case-insensitive falha para elas.
+- A migration do índice falha se já existirem nomes que diferem só por caixa; deduplicar antes de aplicar.
+- Backend: produtos existentes sem categoria (migração) devem receber `OUTRO`.
 
 ## Helpers em `@marcai/shared`
 

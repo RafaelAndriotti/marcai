@@ -60,6 +60,99 @@ describe("orders", () => {
     });
   });
 
+  it("productId repetido em items -> 400 VALIDATION_ERROR com path items", async () => {
+    const p = await makeProduct();
+    const res = await api()
+      .post("/api/orders")
+      .send({
+        items: [
+          { productId: p.id, quantity: 1 },
+          { productId: p.id, quantity: 2 },
+        ],
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe("VALIDATION_ERROR");
+    expect(res.body.error.details.map((d: { path: string }) => d.path)).toContain("items");
+    expect(await prisma.order.count()).toBe(0);
+  });
+
+  it("produtos distintos com mesma quantidade não são duplicado", async () => {
+    const a = await makeProduct({ name: "A" });
+    const b = await makeProduct({ name: "B" });
+    const res = await api()
+      .post("/api/orders")
+      .send({
+        items: [
+          { productId: a.id, quantity: 1 },
+          { productId: b.id, quantity: 1 },
+        ],
+      });
+    expect(res.status).toBe(201);
+  });
+
+  it("editar preço via PATCH não altera pedido antigo; novo pedido usa preço novo", async () => {
+    const p = await makeProduct({ name: "Agua", price: "5.00" });
+    const old = await api()
+      .post("/api/orders")
+      .send({ items: [{ productId: p.id, quantity: 2 }] });
+    expect(old.body.data.total).toBe(10);
+
+    const patch = await api().patch(`/api/products/${p.id}`).send({ price: 9.99 });
+    expect(patch.status).toBe(200);
+
+    const list = await api().get("/api/orders");
+    const oldNow = list.body.data.find((o: { id: string }) => o.id === old.body.data.id);
+    expect(oldNow.total).toBe(10);
+    expect(oldNow.items[0]).toMatchObject({ unitPrice: 5, subtotal: 10, productName: "Agua" });
+
+    const fresh = await api()
+      .post("/api/orders")
+      .send({ items: [{ productId: p.id, quantity: 2 }] });
+    expect(fresh.body.data.total).toBe(19.98);
+    expect(fresh.body.data.items[0].unitPrice).toBe(9.99);
+  });
+
+  it("avulso com customerName: trim e bookingId null", async () => {
+    const p = await makeProduct();
+    const res = await api()
+      .post("/api/orders")
+      .send({ customerName: "  Carla ", items: [{ productId: p.id, quantity: 1 }] });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({ customerName: "Carla", bookingId: null, total: 5 });
+  });
+
+  it("avulso sem customerName e sem bookingId -> customerName null", async () => {
+    const p = await makeProduct();
+    const res = await api()
+      .post("/api/orders")
+      .send({ items: [{ productId: p.id, quantity: 1 }] });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({ customerName: null, bookingId: null });
+  });
+
+  it("customerName só espaços -> 400", async () => {
+    const p = await makeProduct();
+    const res = await api()
+      .post("/api/orders")
+      .send({ customerName: "  ", items: [{ productId: p.id, quantity: 1 }] });
+    expect(res.status).toBe(400);
+  });
+
+  it("com bookingId e customerName explícito: o enviado prevalece", async () => {
+    const court = await makeCourt();
+    const p = await makeProduct();
+    const b = await api().post("/api/bookings").send(bookingBody(court.id, "10:00", "11:00"));
+    const res = await api()
+      .post("/api/orders")
+      .send({
+        bookingId: b.body.data.id,
+        customerName: "Outro",
+        items: [{ productId: p.id, quantity: 1 }],
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data).toMatchObject({ bookingId: b.body.data.id, customerName: "Outro" });
+  });
+
   it("bookingId inexistente -> 404", async () => {
     const p = await makeProduct();
     const res = await api()

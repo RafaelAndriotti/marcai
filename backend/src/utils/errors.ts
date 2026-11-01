@@ -15,8 +15,8 @@ export class AppError extends Error {
     const details: ValidationIssue[] = [{ path, message }];
     return new AppError(400, "VALIDATION_ERROR", "Dados inválidos", details);
   }
-  static notFound(message: string): AppError {
-    return new AppError(404, "NOT_FOUND", message);
+  static notFound(message: string, details?: unknown): AppError {
+    return new AppError(404, "NOT_FOUND", message, details);
   }
   static conflict(message = "Quadra já reservada neste horário"): AppError {
     return new AppError(409, "BOOKING_CONFLICT", message);

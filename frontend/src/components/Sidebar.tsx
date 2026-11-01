@@ -1,4 +1,4 @@
-import { CalendarDays, House, LayoutGrid, Martini, X } from 'lucide-react'
+import { CalendarDays, House, LayoutGrid, Martini, Package, X } from 'lucide-react'
 import { NavLink } from 'react-router'
 import { Wordmark } from './Logo'
 
@@ -7,6 +7,7 @@ const NAV = [
   { to: '/quadras', label: 'Quadras', icon: LayoutGrid },
   { to: '/agenda', label: 'Agenda', icon: CalendarDays },
   { to: '/pedidos', label: 'Pedidos', icon: Martini },
+  { to: '/itens', label: 'Itens', icon: Package },
 ]
 
 interface Props {

@@ -1,7 +1,7 @@
 import { roundMoney, todayLocalDate, toLocalParts } from "@marcai/shared";
 import { prisma } from "../src/config/prisma.js";
 import { localDayRange } from "../src/utils/date.js";
-import { Prisma, type BookingStatus, type Sport } from "../generated/prisma/client.js";
+import { Prisma, type BookingStatus, type ProductCategory, type Sport } from "../generated/prisma/client.js";
 
 const today = todayLocalDate();
 const tomorrow = toLocalParts(localDayRange(today).end).date;
@@ -67,19 +67,19 @@ async function main(): Promise<void> {
     );
   }
 
-  const productDefs: [string, number][] = [
-    ["Água 500ml", 5],
-    ["Refrigerante lata", 7],
-    ["Cerveja long neck", 12],
-    ["Isotônico", 9],
-    ["Açaí 300ml", 18],
-    ["Energético", 12.5],
-    ["Sanduíche natural", 16],
-    ["Porção de batata", 28],
+  const productDefs: [string, number, ProductCategory][] = [
+    ["Água 500ml", 5, "BEBIDA"],
+    ["Refrigerante lata", 7, "BEBIDA"],
+    ["Cerveja long neck", 12, "BEBIDA"],
+    ["Isotônico", 9, "BEBIDA"],
+    ["Açaí 300ml", 18, "COMIDA"],
+    ["Energético", 12.5, "BEBIDA"],
+    ["Sanduíche natural", 16, "COMIDA"],
+    ["Porção de batata", 28, "COMIDA"],
   ];
   const products: Awaited<ReturnType<typeof prisma.product.create>>[] = [];
-  for (const [name, price] of productDefs) {
-    products.push(await prisma.product.create({ data: { name, price } }));
+  for (const [name, price, category] of productDefs) {
+    products.push(await prisma.product.create({ data: { name, price, category } }));
   }
   const p = (name: string) => products.find((x) => x.name === name)!;
 

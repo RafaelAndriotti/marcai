@@ -1,5 +1,5 @@
 import type { Order, OrderStatus } from '@marcai/shared'
-import { CalendarDays, ChevronDown, Receipt } from 'lucide-react'
+import { CalendarDays, ChevronDown, Plus, Receipt } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
@@ -10,6 +10,7 @@ import { Tabs, type TabItem } from '../components/Tabs'
 import { useFetch } from '../hooks/useFetch'
 import { formatBRL, formatDateTime, plural } from '../lib/format'
 import { getOrders } from '../services/api'
+import { NewOrderModal } from './NewOrderModal'
 
 type Filter = 'ALL' | OrderStatus
 
@@ -94,6 +95,7 @@ export function Orders() {
   const [filter, setFilter] = useState<Filter>('ALL')
   // Busca todos uma vez: as contagens das abas vêm das linhas de cada visão.
   const { data, error, loading, refetch } = useFetch(() => getOrders(), [])
+  const [creating, setCreating] = useState(false)
 
   const count = (f: Filter) => (data ? data.filter((o) => f === 'ALL' || o.status === f).length : undefined)
   const tabs: TabItem<Filter>[] = [
@@ -119,6 +121,12 @@ export function Orders() {
       <PageHeader
         title="Pedidos"
         description={description ?? <Skeleton className="mt-1.5 h-4 w-48" />}
+        actions={
+          <button type="button" className="btn-primary" onClick={() => setCreating(true)}>
+            <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            Novo pedido
+          </button>
+        }
       />
       <Tabs tabs={tabs} value={filter} onChange={setFilter} label="Status dos pedidos" panelId="orders-panel" />
 
@@ -148,7 +156,11 @@ export function Orders() {
           <EmptyState
             icon={Receipt}
             title="Nenhum pedido encontrado"
-            description={filter === 'ALL' ? undefined : 'Escolha outra aba para ver os demais pedidos.'}
+            description={
+              filter === 'ALL'
+                ? 'Registre o primeiro pedido do bar.'
+                : 'Escolha outra aba para ver os demais pedidos.'
+            }
           />
         ) : (
           <ul>
@@ -158,6 +170,16 @@ export function Orders() {
           </ul>
         )}
       </div>
+
+      {creating && (
+        <NewOrderModal
+          onClose={() => setCreating(false)}
+          onCreated={() => {
+            setCreating(false)
+            refetch()
+          }}
+        />
+      )}
     </>
   )
 }

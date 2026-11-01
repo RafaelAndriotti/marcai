@@ -16,8 +16,17 @@ export function makeCourt(
   });
 }
 
-export function makeProduct(data: Partial<{ name: string; price: string; active: boolean }> = {}) {
-  return prisma.product.create({ data: { name: "Agua", price: "5.00", active: true, ...data } });
+export function makeProduct(
+  data: Partial<{
+    name: string;
+    price: string;
+    active: boolean;
+    category: "BEBIDA" | "COMIDA" | "OUTRO";
+  }> = {},
+) {
+  return prisma.product.create({
+    data: { name: "Agua", price: "5.00", active: true, category: "BEBIDA", ...data },
+  });
 }
 
 export function bookingBody(courtId: string, start: string, end: string, extra = {}) {

@@ -1,11 +1,15 @@
 import { z } from "zod";
 
-/** Reais como number, no máximo 2 casas decimais, >= 0. */
+/** Maior valor aceito (cabe em Decimal(10,2)). */
+export const MAX_MONEY = 99_999_999.99;
+
+/** Reais como number, no máximo 2 casas decimais, 0 <= v <= MAX_MONEY. */
 export const moneySchema = z
   .number()
   .nonnegative()
   .finite()
-  .refine((v) => Math.abs(Math.round(v * 100) - v * 100) < 1e-6, {
+  .max(MAX_MONEY)
+  .refine((v) => v === roundMoney(v), {
     message: "must have at most 2 decimal places",
   });
 

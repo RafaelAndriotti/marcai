@@ -21,18 +21,21 @@ export interface Order {
 }
 
 export const createOrderSchema = z.object({
-  bookingId: z.string().min(1).optional(),
+  bookingId: z.string().min(1).max(64).optional(),
   /** Opcional; se omitido e houver bookingId, o servidor usa o cliente da reserva. */
-  customerName: z.string().trim().min(1).optional(),
+  customerName: z.string().trim().min(1).max(80).optional(),
   items: z
     .array(
       z.object({
-        productId: z.string().min(1),
+        productId: z.string().min(1).max(64),
         quantity: z.number().int().min(1).max(999),
       }),
     )
     .min(1)
-    .max(50),
+    .max(50)
+    .refine((items) => new Set(items.map((i) => i.productId)).size === items.length, {
+      message: "duplicate productId; merge quantities into a single item",
+    }),
 });
 export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 
