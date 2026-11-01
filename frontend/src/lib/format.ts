@@ -75,3 +75,13 @@ function offsetFor(date: string, minutes: number): string {
 export function toIso(date: string, minutes: number): string {
   return `${date}T${minutesToHHMM(minutes)}:00${offsetFor(date, minutes)}`
 }
+
+/** "1 reserva" / "2 reservas". */
+export const plural = (n: number, one: string, many: string): string => (n === 1 ? one : many)
+
+const hoursFmt = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 })
+/** "5,5 h". */
+export const formatHours = (h: number): string => `${hoursFmt.format(h)} h`
+
+/** Primeiro nome para espaços curtos. */
+export const firstName = (full: string): string => full.trim().split(/\s+/)[0] ?? full

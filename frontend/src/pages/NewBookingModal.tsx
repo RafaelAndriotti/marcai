@@ -125,7 +125,7 @@ export function NewBookingModal({
         )}
 
         <div>
-          <label htmlFor={id('court')} className="mb-1 block text-sm font-medium">
+          <label htmlFor={id('court')} className="mb-1.5 block text-sm font-medium">
             Quadra
           </label>
           <select
@@ -145,7 +145,7 @@ export function NewBookingModal({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label htmlFor={id('name')} className="mb-1 block text-sm font-medium">
+            <label htmlFor={id('name')} className="mb-1.5 block text-sm font-medium">
               Cliente
             </label>
             <input
@@ -158,7 +158,7 @@ export function NewBookingModal({
             />
           </div>
           <div>
-            <label htmlFor={id('phone')} className="mb-1 block text-sm font-medium">
+            <label htmlFor={id('phone')} className="mb-1.5 block text-sm font-medium">
               Telefone
             </label>
             <input
@@ -176,7 +176,7 @@ export function NewBookingModal({
 
         <div className="grid gap-4 sm:grid-cols-3">
           <div>
-            <label htmlFor={id('date')} className="mb-1 block text-sm font-medium">
+            <label htmlFor={id('date')} className="mb-1.5 block text-sm font-medium">
               Data
             </label>
             <input
@@ -189,7 +189,7 @@ export function NewBookingModal({
             />
           </div>
           <div>
-            <label htmlFor={id('start')} className="mb-1 block text-sm font-medium">
+            <label htmlFor={id('start')} className="mb-1.5 block text-sm font-medium">
               Início
             </label>
             <select
@@ -206,7 +206,7 @@ export function NewBookingModal({
             </select>
           </div>
           <div>
-            <label htmlFor={id('dur')} className="mb-1 block text-sm font-medium">
+            <label htmlFor={id('dur')} className="mb-1.5 block text-sm font-medium">
               Duração
             </label>
             <select
@@ -229,10 +229,10 @@ export function NewBookingModal({
         </p>
 
         <div className="flex justify-end gap-2 pt-1">
-          <button type="button" className="btn-ghost" onClick={onClose}>
+          <button type="button" className="btn-ghost btn-lg" onClick={onClose}>
             Cancelar
           </button>
-          <button type="submit" className="btn-primary" disabled={saving || !courtId}>
+          <button type="submit" className="btn-primary btn-lg" disabled={saving || !courtId}>
             {saving ? 'Salvando…' : 'Criar reserva'}
           </button>
         </div>
