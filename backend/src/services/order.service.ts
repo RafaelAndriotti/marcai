@@ -42,10 +42,10 @@ export const orderService = {
       }
 
       const ids = [...new Set(input.items.map((i) => i.productId))];
-      // FOR SHARE: impede alterar preço/active dos produtos até o fim da transação
+      // FOR UPDATE: impede alterar preço/active/estoque dos produtos até o fim da transação
       const found = await tx.$queryRaw<
-        { id: string; name: string; active: boolean; price: Prisma.Decimal }[]
-      >`SELECT id, name, active, price FROM "Product" WHERE id = ANY(${ids}) FOR SHARE`;
+        { id: string; name: string; active: boolean; price: Prisma.Decimal; stockQuantity: number }[]
+      >`SELECT id, name, active, price, "stockQuantity" FROM "Product" WHERE id = ANY(${ids}) ORDER BY id FOR UPDATE`;
       const products = new Map(found.map((p) => [p.id, p]));
 
       let total = new Prisma.Decimal(0);
@@ -67,6 +67,17 @@ export const orderService = {
           subtotal,
         };
       });
+
+      // soma quantidades do mesmo produto e baixa o estoque (linhas já travadas)
+      const wanted = new Map<string, number>();
+      for (const i of items) wanted.set(i.productId, (wanted.get(i.productId) ?? 0) + i.quantity);
+      for (const [productId, n] of wanted) {
+        const available = products.get(productId)!.stockQuantity;
+        if (n > available) {
+          throw new AppError(409, "INSUFFICIENT_STOCK", "Estoque insuficiente", { productId, available });
+        }
+        await tx.product.update({ where: { id: productId }, data: { stockQuantity: { decrement: n } } });
+      }
 
       return orderModel.create(tx, {
         bookingId: input.bookingId ?? null,

@@ -11,36 +11,36 @@ afterEach(() => {
 });
 
 describe("limites de preço", () => {
-  const base = { name: "Coca", category: "BEBIDA" };
+  const base = { name: "Coca", categoryId: "cat_bebida", profitMargin: 0, stockQuantity: 0 };
 
   it("POST: 100000 -> 201", async () => {
     const res = await api()
       .post("/api/products")
-      .send({ ...base, price: 100000 });
+      .send({ ...base, costPrice: 100000 });
     expect(res.status).toBe(201);
     expect(res.body.data.price).toBe(100000);
   });
 
-  it.each([100000.01, 0.001, 0.010000001])("POST: %s -> 400 path price", async (price) => {
-    const res = await api().post("/api/products").send({ ...base, price });
+  it.each([[100000.01, "price"], [0.001, "costPrice"], [0.010000001, "costPrice"]])("POST: %s -> 400 path %s", async (costPrice, path) => {
+    const res = await api().post("/api/products").send({ ...base, costPrice });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
-    expect(paths(res)).toContain("price");
+    expect(paths(res)).toContain(path);
   });
 
   it("PATCH: 100000 -> 200", async () => {
     const p = await makeProduct();
-    const res = await api().patch(`/api/products/${p.id}`).send({ price: 100000 });
+    const res = await api().patch(`/api/products/${p.id}`).send({ costPrice: 100000 });
     expect(res.status).toBe(200);
     expect(res.body.data.price).toBe(100000);
   });
 
-  it.each([100000.01, 0.001, 0.010000001])("PATCH: %s -> 400 path price", async (price) => {
+  it.each([[100000.01, "price"], [0.001, "costPrice"], [0.010000001, "costPrice"]])("PATCH: %s -> 400 path %s", async (costPrice, path) => {
     const p = await makeProduct();
-    const res = await api().patch(`/api/products/${p.id}`).send({ price });
+    const res = await api().patch(`/api/products/${p.id}`).send({ costPrice });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
-    expect(paths(res)).toContain("price");
+    expect(paths(res)).toContain(path);
   });
 
   it("court pricePerHour 1e12 -> 400 (não 500)", async () => {
@@ -54,7 +54,7 @@ describe("limites de preço", () => {
 });
 
 describe("nome de produto: caracteres", () => {
-  const body = { price: 5, category: "BEBIDA" };
+  const body = { costPrice: 5, profitMargin: 0, stockQuantity: 0, categoryId: "cat_bebida" };
 
   it.each([
     ["controle \\u0000", "Co\u0000ca"],
@@ -175,7 +175,7 @@ describe("app: headers, body e rotas", () => {
   it("JSON > 16kb -> 400 VALIDATION_ERROR", async () => {
     const res = await api()
       .post("/api/products")
-      .send({ name: "a".repeat(20 * 1024), price: 1, category: "BEBIDA" });
+      .send({ name: "a".repeat(20 * 1024), costPrice: 1, profitMargin: 0, stockQuantity: 0, categoryId: "cat_bebida" });
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
   });

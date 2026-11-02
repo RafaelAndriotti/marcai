@@ -97,7 +97,7 @@ describe("orders", () => {
       .send({ items: [{ productId: p.id, quantity: 2 }] });
     expect(old.body.data.total).toBe(10);
 
-    const patch = await api().patch(`/api/products/${p.id}`).send({ price: 9.99 });
+    const patch = await api().patch(`/api/products/${p.id}`).send({ costPrice: 9.99 });
     expect(patch.status).toBe(200);
 
     const list = await api().get("/api/orders");
@@ -220,13 +220,14 @@ describe("orders", () => {
 });
 
 describe("products", () => {
-  it("lista ordenado por nome incluindo inativos", async () => {
+  it("lista ordenado por nome só com ativos", async () => {
     await makeProduct({ name: "B", price: "7.50" });
     await makeProduct({ name: "A", active: false });
+    await makeProduct({ name: "C" });
     const res = await api().get("/api/products");
     expect(res.status).toBe(200);
-    expect(res.body.data.map((p: { name: string }) => p.name)).toEqual(["A", "B"]);
-    expect(res.body.data[1].price).toBe(7.5);
+    expect(res.body.data.map((p: { name: string }) => p.name)).toEqual(["B", "C"]);
+    expect(res.body.data[0].price).toBe(7.5);
   });
 
   describe("PATCH /api/orders/:id/status", () => {

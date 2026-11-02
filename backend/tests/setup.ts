@@ -12,6 +12,14 @@ beforeEach(async () => {
   await prisma.order.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.category.createMany({
+    data: [
+      { id: "cat_bebida", name: "Bebida" },
+      { id: "cat_comida", name: "Comida" },
+      { id: "cat_outro", name: "Outro" },
+    ],
+  });
   await prisma.court.deleteMany();
 });
 

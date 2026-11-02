@@ -112,6 +112,9 @@
 @utility btn-ghost {
   @apply btn border border-control bg-surface text-fg hover:bg-surface-2;
 }
+@utility btn-danger {
+  @apply btn bg-danger text-surface hover:opacity-90;
+}
 @utility btn-text {
   @apply inline-flex items-center gap-1 rounded-sm text-sm font-medium text-fg underline-offset-4 hover:underline;
 }

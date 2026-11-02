@@ -16,16 +16,31 @@ export function makeCourt(
   });
 }
 
+/** Categorias fixas recriadas a cada teste (tests/setup.ts). */
+export const CAT = { BEBIDA: "cat_bebida", COMIDA: "cat_comida", OUTRO: "cat_outro" } as const;
+
 export function makeProduct(
   data: Partial<{
     name: string;
     price: string;
+    stockQuantity: number;
     active: boolean;
-    category: "BEBIDA" | "COMIDA" | "OUTRO";
+    category: keyof typeof CAT;
   }> = {},
 ) {
+  const { category = "BEBIDA", ...rest } = data;
+  const price = data.price ?? "5.00";
   return prisma.product.create({
-    data: { name: "Agua", price: "5.00", active: true, category: "BEBIDA", ...data },
+    data: {
+      name: "Agua",
+      active: true,
+      categoryId: CAT[category],
+      costPrice: price,
+      profitMargin: 0,
+      stockQuantity: 1000,
+      ...rest,
+      price,
+    },
   });
 }
 

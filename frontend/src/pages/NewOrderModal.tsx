@@ -1,10 +1,4 @@
-import {
-  PRODUCT_CATEGORIES,
-  PRODUCT_CATEGORY_LABELS,
-  type Booking,
-  type CreateOrderInput,
-  type Product,
-} from '@marcai/shared'
+import type { Booking, CreateOrderInput, Product } from '@marcai/shared'
 import { Minus, Plus } from 'lucide-react'
 import { useId, useMemo, useState, type FormEvent } from 'react'
 import { ErrorState } from '../components/ErrorState'
@@ -21,13 +15,21 @@ type Mode = 'booking' | 'walkin'
 /** Total só para exibição; o servidor é a fonte. Soma em centavos para não acumular erro de ponto flutuante. */
 const lineCents = (p: Product, qty: number) => Math.round(p.price * 100) * qty
 
-function friendlyOrderError(e: unknown): string {
+function friendlyOrderError(e: unknown, products: Product[] = []): string {
   if (!(e instanceof ApiError)) return 'Não foi possível registrar o pedido. Tente novamente.'
   switch (e.code) {
     case 'NOT_FOUND':
       return e.details && typeof e.details === 'object' && 'productId' in e.details
         ? 'Um dos itens não existe mais. Remova a linha marcada e tente de novo.'
         : 'Reserva não encontrada. Escolha outra ou use cliente avulso.'
+    case 'INSUFFICIENT_STOCK': {
+      const d = e.details as { productId?: string; available?: number } | undefined
+      const name = products.find((p) => p.id === d?.productId)?.name
+      const of = name ? `de ${name}` : 'de um dos itens'
+      return typeof d?.available === 'number'
+        ? `Estoque insuficiente: só ${d.available} ${d.available === 1 ? 'unidade disponível' : 'unidades disponíveis'} ${of}. Ajuste a quantidade.`
+        : `Estoque insuficiente ${of}. Ajuste a quantidade.`
+    }
     case 'VALIDATION_ERROR': {
       const issues = Array.isArray(e.details) ? (e.details as { path?: unknown; message?: unknown }[]) : []
       if (issues.some((i) => i.path === 'total' || /too large/.test(String(i.message ?? ''))))
@@ -76,10 +78,14 @@ export function NewOrderModal({ onClose, onCreated }: Props) {
   const active = useMemo(() => products.data?.filter((p) => p.active) ?? [], [products.data])
   const byId = useMemo(() => new Map(active.map((p) => [p.id, p])), [active])
   const needle = search.trim().toLocaleLowerCase('pt-BR')
-  const groups = PRODUCT_CATEGORIES.map((c) => ({
+  // Grupos vêm dos próprios itens: categoria nova ou falha em /categories não esconde nada.
+  const categoryList = [...new Map(active.map((p) => [p.categoryId, { id: p.categoryId, name: p.categoryName }])).values()].sort(
+    (a, b) => a.name.localeCompare(b.name, 'pt-BR'),
+  )
+  const groups = categoryList.map((c) => ({
     category: c,
     items: active.filter(
-      (p) => p.category === c && (!needle || p.name.toLocaleLowerCase('pt-BR').includes(needle)),
+      (p) => p.categoryId === c.id && (!needle || p.name.toLocaleLowerCase('pt-BR').includes(needle)),
     ),
   })).filter((g) => g.items.length > 0)
 
@@ -134,9 +140,9 @@ export function NewOrderModal({ onClose, onCreated }: Props) {
       await createOrder(input)
       onCreated()
     } catch (err) {
-      setError(friendlyOrderError(err))
+      setError(friendlyOrderError(err, [...Object.values(picked), ...(products.data ?? [])]))
       // Item inativo ou inexistente: recarrega a lista; a linha afetada fica marcada.
-      if (err instanceof ApiError && (err.code === 'NOT_FOUND' || err.code === 'VALIDATION_ERROR')) products.refetch()
+      if (err instanceof ApiError && (err.code === 'NOT_FOUND' || err.code === 'VALIDATION_ERROR' || err.code === 'INSUFFICIENT_STOCK')) products.refetch()
       setSaving(false)
     }
   }
@@ -269,9 +275,9 @@ export function NewOrderModal({ onClose, onCreated }: Props) {
               <p className="px-3 py-4 text-sm text-muted">Nenhum item encontrado para essa busca.</p>
             ) : (
               groups.map((g) => (
-                <div key={g.category} role="group" aria-label={PRODUCT_CATEGORY_LABELS[g.category]}>
+                <div key={g.category.id} role="group" aria-label={g.category.name}>
                   <p className="sticky top-0 bg-surface-2 px-3 py-1 text-xs text-muted">
-                    {PRODUCT_CATEGORY_LABELS[g.category]}
+                    {g.category.name}
                   </p>
                   <ul>
                     {g.items.map((p) => (
@@ -281,12 +287,15 @@ export function NewOrderModal({ onClose, onCreated }: Props) {
                       >
                         <span className="min-w-0 flex-1 truncate text-sm">{p.name}</span>
                         {qty[p.id] ? <span className="text-xs text-muted">{qty[p.id]} no pedido</span> : null}
+                        <span className={`text-xs ${p.stockQuantity === 0 ? 'text-danger-fg' : 'text-muted'}`}>
+                          {p.stockQuantity === 0 ? 'Sem estoque' : `${p.stockQuantity} em estoque`}
+                        </span>
                         <span className="text-sm">{formatBRL(p.price)}</span>
                         <button
                           type="button"
                           className="btn-text"
                           aria-label={`Adicionar ${p.name}`}
-                          disabled={(qty[p.id] ?? 0) >= MAX_QTY}
+                          disabled={(qty[p.id] ?? 0) >= Math.min(MAX_QTY, p.stockQuantity)}
                           onClick={() => add(p.id)}
                         >
                           Adicionar
@@ -346,7 +355,7 @@ export function NewOrderModal({ onClose, onCreated }: Props) {
                       type="button"
                       className="btn-ghost w-8 px-0"
                       aria-label={`Aumentar ${p.name}`}
-                      disabled={unavailable || quantity >= MAX_QTY}
+                      disabled={unavailable || quantity >= Math.min(MAX_QTY, p.stockQuantity)}
                       onClick={() => add(p.id)}
                     >
                       <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />

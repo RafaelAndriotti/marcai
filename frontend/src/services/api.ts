@@ -3,7 +3,9 @@ import type {
   Booking,
   BookingStatus,
   Court,
+  Category,
   CreateBookingInput,
+  CreateCategoryInput,
   CreateOrderInput,
   CreateProductInput,
   DashboardSummary,
@@ -11,7 +13,6 @@ import type {
   Order,
   OrderStatus,
   Product,
-  ProductCategory,
   UpdateProductInput,
 } from '@marcai/shared'
 
@@ -59,6 +60,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       res.status,
     )
   }
+  if (res.status === 204) return undefined as T
   if (!body || typeof body !== 'object' || !('data' in body)) {
     throw new ApiError('NETWORK_ERROR', 'Resposta inválida do servidor.', res.status)
   }
@@ -82,8 +84,13 @@ export const updateBookingStatus = (id: string, status: BookingStatus) =>
     method: 'PATCH',
     body: JSON.stringify({ status }),
   })
-export const getProducts = (category?: ProductCategory) =>
-  request<Product[]>(`/products${qs({ category })}`)
+export const getProducts = (categoryId?: string) =>
+  request<Product[]>(`/products${qs({ categoryId })}`)
+export const deleteProduct = (id: string) =>
+  request<void>(`/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
+export const getCategories = () => request<Category[]>('/categories')
+export const createCategory = (input: CreateCategoryInput) =>
+  request<Category>('/categories', { method: 'POST', body: JSON.stringify(input) })
 export const createProduct = (input: CreateProductInput) =>
   request<Product>('/products', { method: 'POST', body: JSON.stringify(input) })
 export const updateProduct = (id: string, input: UpdateProductInput) =>

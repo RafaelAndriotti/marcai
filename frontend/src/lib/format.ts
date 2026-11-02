@@ -27,6 +27,10 @@ export const today = (): string => todayLocalDate()
 
 export const formatBRL = (v: number): string => brl.format(v)
 
+/** Margem em % (35.5 vira "35,5%"); formatPercent é para fração 0..1. */
+export const formatMargin = (v: number): string =>
+  `${v.toLocaleString('pt-BR', { maximumFractionDigits: 2 })}%`
+
 export const formatPercent = (v: number): string => `${Math.round(v * 100)}%`
 
 /** "18:30" no fuso do shared. */

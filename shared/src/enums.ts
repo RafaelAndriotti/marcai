@@ -27,12 +27,3 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   PAID: "Pago",
   CANCELLED: "Cancelado",
 };
-
-export const PRODUCT_CATEGORIES = ["BEBIDA", "COMIDA", "OUTRO"] as const;
-export const productCategorySchema = z.enum(PRODUCT_CATEGORIES);
-export type ProductCategory = z.infer<typeof productCategorySchema>;
-export const PRODUCT_CATEGORY_LABELS: Record<ProductCategory, string> = {
-  BEBIDA: "Bebida",
-  COMIDA: "Comida",
-  OUTRO: "Outro",
-};

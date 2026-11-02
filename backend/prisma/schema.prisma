@@ -26,10 +26,14 @@ enum OrderStatus {
   CANCELLED
 }
 
-enum ProductCategory {
-  BEBIDA
-  COMIDA
-  OUTRO
+model Category {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  products  Product[]
+
+  // Unicidade case-insensitive: índice único em lower(name) criado via SQL na migration
+  // category_table (Prisma não modela índices de expressão).
 }
 
 model Court {
@@ -62,14 +66,20 @@ model Booking {
 model Product {
   id         String          @id @default(cuid())
   name       String
+  // price = costPrice * (1 + profitMargin/100), calculado no backend (ROUND_HALF_UP)
   price      Decimal         @db.Decimal(10, 2)
-  category   ProductCategory @default(OUTRO)
+  costPrice  Decimal         @db.Decimal(10, 2)
+  // margem em %, ex. 35.50
+  profitMargin  Decimal      @db.Decimal(6, 2)
+  stockQuantity Int
+  categoryId String
+  category   Category        @relation(fields: [categoryId], references: [id])
   active     Boolean         @default(true)
   createdAt  DateTime        @default(now())
   orderItems OrderItem[]
 
-  // Unicidade case-insensitive: índice único em lower(name) criado via SQL na migration
-  // product_category (Prisma não modela índices de expressão).
+  // Unicidade case-insensitive entre itens ativos: índice único parcial em lower(name)
+  // WHERE active = true, criado via SQL na migration category_table (Prisma não modela).
 }
 
 model Order {

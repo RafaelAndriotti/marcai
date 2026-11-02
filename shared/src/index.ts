@@ -1,6 +1,7 @@
 export * from "./enums.js";
 export * from "./court.js";
 export * from "./booking.js";
+export * from "./category.js";
 export * from "./product.js";
 export * from "./order.js";
 export * from "./dashboard.js";

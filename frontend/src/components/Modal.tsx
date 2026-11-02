@@ -6,10 +6,12 @@ interface Props {
   onClose: () => void
   children: ReactNode
   wide?: boolean
+  /** Ocupado (ex.: requisição em andamento): Esc, X e clique fora não fecham. */
+  busy?: boolean
 }
 
 /** Modal sobre <dialog> nativo: foco preso, Esc fecha, restaura foco. */
-export function Modal({ title, onClose, children, wide }: Props) {
+export function Modal({ title, onClose, children, wide, busy }: Props) {
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -22,11 +24,14 @@ export function Modal({ title, onClose, children, wide }: Props) {
     <dialog
       ref={ref}
       aria-labelledby="modal-title"
+      onCancel={(e) => {
+        if (busy) e.preventDefault()
+      }}
       onClose={() => {
         if (!ref.current?.open) onClose()
       }}
       onClick={(e) => {
-        if (e.target === ref.current) onClose()
+        if (e.target === ref.current && !busy) onClose()
       }}
       className={`m-auto max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] ${wide ? 'max-w-2xl' : 'max-w-lg'} overflow-y-auto rounded-lg border border-line bg-surface p-0 text-fg shadow-xl backdrop:bg-slate-950/60`}
     >
@@ -36,7 +41,8 @@ export function Modal({ title, onClose, children, wide }: Props) {
         </h2>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => !busy && onClose()}
+          disabled={busy}
           aria-label="Fechar"
           className="grid size-8 place-items-center rounded-lg text-muted hover:bg-surface-2"
         >

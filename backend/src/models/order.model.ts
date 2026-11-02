@@ -64,13 +64,24 @@ export const orderModel = {
 
   /** Muda o status só se o pedido ainda está OPEN (atômico). Devolve null se não mudou. */
   async closeIfOpen(id: string, status: "PAID" | "CANCELLED"): Promise<Order | null> {
-    const { count } = await prisma.order.updateMany({ where: { id, status: "OPEN" }, data: { status } });
-    if (count === 0) return null;
-    const row = await prisma.order.findUniqueOrThrow({
-      where: { id },
-      include: { items: { orderBy: { id: "asc" } } },
+    // CANCELLED devolve o estoque na mesma transação da mudança de status
+    return prisma.$transaction(async (tx) => {
+      const { count } = await tx.order.updateMany({ where: { id, status: "OPEN" }, data: { status } });
+      if (count === 0) return null;
+      const row = await tx.order.findUniqueOrThrow({
+        where: { id },
+        include: { items: { orderBy: { id: "asc" } } },
+      });
+      if (status === "CANCELLED") {
+        const back = new Map<string, number>();
+        for (const i of row.items) back.set(i.productId, (back.get(i.productId) ?? 0) + i.quantity);
+        // ordem por id, igual ao FOR UPDATE da criação, evita deadlock
+        for (const [productId, n] of [...back].sort(([a], [b]) => (a < b ? -1 : 1))) {
+          await tx.product.update({ where: { id: productId }, data: { stockQuantity: { increment: n } } });
+        }
+      }
+      return toOrderDto(row);
     });
-    return toOrderDto(row);
   },
 
   exists(id: string): Promise<boolean> {

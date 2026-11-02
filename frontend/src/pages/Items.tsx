@@ -1,35 +1,66 @@
-import { PRODUCT_CATEGORY_LABELS, type Product, type ProductCategory } from '@marcai/shared'
+import type { Product } from '@marcai/shared'
 import { Package, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
+import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { Skeleton } from '../components/Skeleton'
 import { Tabs, type TabItem } from '../components/Tabs'
 import { useFetch } from '../hooks/useFetch'
-import { formatBRL, plural } from '../lib/format'
-import { getProducts } from '../services/api'
+import { formatBRL, formatMargin, plural } from '../lib/format'
+import { ApiError, deleteProduct, getCategories, getProducts } from '../services/api'
+import { CategoryModal } from './CategoryModal'
 import { ProductModal } from './ProductModal'
 
-type Filter = 'ALL' | ProductCategory
+/** 'ALL' ou o id da categoria. */
+type Filter = string
 
-const COLS = 'sm:grid-cols-[minmax(0,1fr)_8rem_7rem_6.5rem_4rem]'
+const COLS = 'sm:grid-cols-[minmax(0,1fr)_6.5rem_5rem_6rem_5rem_6rem_6rem_4rem]'
 
 export function Items() {
   const [filter, setFilter] = useState<Filter>('ALL')
   // Busca todos uma vez: as contagens das abas vêm das linhas de cada categoria.
   const { data, error, loading, refetch } = useFetch(() => getProducts(), [])
+  const categories = useFetch(() => getCategories(), [])
   const [modal, setModal] = useState<{ product?: Product } | null>(null)
+  const [catModal, setCatModal] = useState(false)
+  const [toDelete, setToDelete] = useState<Product | null>(null)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string>()
 
-  const count = (f: Filter) => (data ? data.filter((p) => f === 'ALL' || p.category === f).length : undefined)
+  async function confirmDelete() {
+    if (!toDelete) return
+    setDeleting(true)
+    setDeleteError(undefined)
+    try {
+      await deleteProduct(toDelete.id)
+      setToDelete(null)
+      refetch()
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'NOT_FOUND') {
+        // já excluído em outro lugar: some da lista, nada a confirmar
+        setToDelete(null)
+        refetch()
+        return
+      }
+      setDeleteError(
+        e instanceof ApiError && e.code === 'NETWORK_ERROR'
+          ? e.message
+          : 'Não foi possível excluir o item. Tente novamente.',
+      )
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const count = (f: Filter) => (data ? data.filter((p) => f === 'ALL' || p.categoryId === f).length : undefined)
   const tabs: TabItem<Filter>[] = [
     { id: 'ALL', label: 'Todos', count: count('ALL') },
-    { id: 'BEBIDA', label: PRODUCT_CATEGORY_LABELS.BEBIDA, count: count('BEBIDA') },
-    { id: 'COMIDA', label: PRODUCT_CATEGORY_LABELS.COMIDA, count: count('COMIDA') },
-    { id: 'OUTRO', label: PRODUCT_CATEGORY_LABELS.OUTRO, count: count('OUTRO') },
+    ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name, count: count(c.id) })),
   ]
 
-  const rows = data?.filter((p) => filter === 'ALL' || p.category === filter) ?? []
+  const rows = data?.filter((p) => filter === 'ALL' || p.categoryId === filter) ?? []
   const active = rows.filter((p) => p.active).length
   const description = data
     ? rows.length === 0
@@ -45,10 +76,20 @@ export function Items() {
         title="Itens"
         description={description ?? <Skeleton className="mt-1.5 h-4 w-40" />}
         actions={
-          <button type="button" className="btn-primary" onClick={() => setModal({})}>
-            <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
-            Novo item
-          </button>
+          <>
+            <button type="button" className="btn-ghost" onClick={() => setCatModal(true)}>
+              Nova categoria
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={!categories.data?.length}
+              onClick={() => setModal({})}
+            >
+              <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              Novo item
+            </button>
+          </>
         }
       />
       <Tabs tabs={tabs} value={filter} onChange={setFilter} label="Categorias dos itens" panelId="items-panel" />
@@ -60,6 +101,9 @@ export function Items() {
         >
           <span>Item</span>
           <span>Categoria</span>
+          <span className="text-right">Estoque</span>
+          <span className="text-right">Custo</span>
+          <span className="text-right">Margem</span>
           <span className="text-right">Preço</span>
           <span>Situação</span>
           <span />
@@ -72,6 +116,8 @@ export function Items() {
               </li>
             ))}
           </ul>
+        ) : categories.error ? (
+          <ErrorState what="as categorias" message={categories.error.message} onRetry={categories.refetch} />
         ) : error || !data ? (
           <ErrorState what="os itens" message={error?.message} onRetry={refetch} />
         ) : rows.length === 0 ? (
@@ -95,9 +141,23 @@ export function Items() {
               >
                 <span className="truncate font-medium">{p.name}</span>
                 <span className="order-4 col-span-2 text-[13px] text-muted sm:order-none sm:col-auto sm:text-sm sm:text-fg">
-                  {PRODUCT_CATEGORY_LABELS[p.category]}
+                  {p.categoryName}
                 </span>
+                <span
+                  className={`hidden text-right sm:block ${p.stockQuantity === 0 ? 'font-medium text-danger-fg' : ''}`}
+                >
+                  {p.stockQuantity === 0 ? 'Zerado' : p.stockQuantity}
+                </span>
+                <span className="hidden text-right sm:block">{formatBRL(p.costPrice)}</span>
+                <span className="hidden text-right sm:block">{formatMargin(p.profitMargin)}</span>
                 <span className="text-right sm:order-none">{formatBRL(p.price)}</span>
+                <span className="order-6 col-span-3 text-[13px] text-muted sm:hidden">
+                  Estoque{' '}
+                  <span className={p.stockQuantity === 0 ? 'font-medium text-danger-fg' : ''}>
+                    {p.stockQuantity === 0 ? 'zerado' : p.stockQuantity}
+                  </span>{' '}
+                  · Custo {formatBRL(p.costPrice)} · Margem {formatMargin(p.profitMargin)}
+                </span>
                 <span className="order-5 col-span-2 flex items-center gap-1.5 text-sm sm:order-none sm:col-auto">
                   <span
                     className={`size-1.5 rounded-full ${p.active ? 'bg-primary' : 'bg-control'}`}
@@ -110,9 +170,21 @@ export function Items() {
                     type="button"
                     className="btn-text"
                     aria-label={`Editar ${p.name}`}
+                    disabled={!categories.data}
                     onClick={() => setModal({ product: p })}
                   >
                     Editar
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-text ml-3 text-danger-fg"
+                    aria-label={`Excluir ${p.name}`}
+                    onClick={() => {
+                      setDeleteError(undefined)
+                      setToDelete(p)
+                    }}
+                  >
+                    Excluir
                   </button>
                 </span>
               </li>
@@ -121,15 +193,50 @@ export function Items() {
         )}
       </div>
 
-      {modal && (
+      {modal && categories.data && (
         <ProductModal
           product={modal.product}
+          categories={categories.data}
           onClose={() => setModal(null)}
           onSaved={() => {
             setModal(null)
             refetch()
           }}
         />
+      )}
+      {catModal && (
+        <CategoryModal
+          onClose={() => setCatModal(false)}
+          onCreated={(c) => {
+            setCatModal(false)
+            categories.refetch()
+            setFilter(c.id)
+          }}
+        />
+      )}
+
+      {toDelete && (
+        <Modal key={toDelete.id} title="Excluir item" busy={deleting} onClose={() => setToDelete(null)}>
+          <div className="grid gap-4">
+            {deleteError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger-fg"
+              >
+                {deleteError}
+              </div>
+            )}
+            <p className="text-sm">Excluir {toDelete.name}? Pedidos já registrados não mudam.</p>
+            <div className="flex justify-end gap-2">
+              <button type="button" className="btn-ghost btn-lg" disabled={deleting} onClick={() => setToDelete(null)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn-danger btn-lg" disabled={deleting} onClick={confirmDelete}>
+                {deleting ? 'Excluindo…' : 'Excluir'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </>
   )

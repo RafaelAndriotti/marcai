@@ -1,7 +1,7 @@
 import { roundMoney, todayLocalDate, toLocalParts } from "@marcai/shared";
 import { prisma } from "../src/config/prisma.js";
 import { localDayRange } from "../src/utils/date.js";
-import { Prisma, type BookingStatus, type ProductCategory, type Sport } from "../generated/prisma/client.js";
+import { Prisma, type BookingStatus, type Sport } from "../generated/prisma/client.js";
 
 const today = todayLocalDate();
 const tomorrow = toLocalParts(localDayRange(today).end).date;
@@ -19,6 +19,7 @@ async function main(): Promise<void> {
   await prisma.order.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.product.deleteMany();
+  await prisma.category.deleteMany();
   await prisma.court.deleteMany();
 
   const courtDefs: { name: string; sport: Sport; pricePerHour: number }[] = [
@@ -67,19 +68,27 @@ async function main(): Promise<void> {
     );
   }
 
-  const productDefs: [string, number, ProductCategory][] = [
-    ["Água 500ml", 5, "BEBIDA"],
-    ["Refrigerante lata", 7, "BEBIDA"],
-    ["Cerveja long neck", 12, "BEBIDA"],
-    ["Isotônico", 9, "BEBIDA"],
-    ["Açaí 300ml", 18, "COMIDA"],
-    ["Energético", 12.5, "BEBIDA"],
-    ["Sanduíche natural", 16, "COMIDA"],
-    ["Porção de batata", 28, "COMIDA"],
+  // [nome, custo, margem %, categoria]; preço = custo * (1 + margem/100), 2 casas HALF_UP
+  const productDefs: [string, number, number, string][] = [
+    ["Água 500ml", 2.5, 100, "Bebida"],
+    ["Refrigerante lata", 3.8, 84.21, "Bebida"],
+    ["Cerveja long neck", 6.5, 84.62, "Bebida"],
+    ["Isotônico", 4.9, 83.67, "Bebida"],
+    ["Açaí 300ml", 9, 100, "Comida"],
+    ["Energético", 7, 78.57, "Bebida"],
+    ["Sanduíche natural", 8.5, 88.24, "Comida"],
+    ["Porção de batata", 14, 100, "Comida"],
   ];
+  const categories = new Map<string, string>();
+  for (const name of ["Bebida", "Comida", "Outro"]) categories.set(name, (await prisma.category.create({ data: { name } })).id);
   const products: Awaited<ReturnType<typeof prisma.product.create>>[] = [];
-  for (const [name, price, category] of productDefs) {
-    products.push(await prisma.product.create({ data: { name, price, category } }));
+  for (const [name, cost, margin, category] of productDefs) {
+    const costPrice = new Prisma.Decimal(cost);
+    const profitMargin = new Prisma.Decimal(margin);
+    const price = costPrice.mul(profitMargin.div(100).add(1)).toDecimalPlaces(2, Prisma.Decimal.ROUND_HALF_UP);
+    products.push(
+      await prisma.product.create({ data: { name, price, costPrice, profitMargin, stockQuantity: 50, categoryId: categories.get(category)! } }),
+    );
   }
   const p = (name: string) => products.find((x) => x.name === name)!;
 
