@@ -22,7 +22,7 @@ Toda resposta de sucesso é um envelope `{ "data": ... }`.
 Erro (`ApiErrorResponse`):
 
 ```json
-{ "error": { "code": "VALIDATION_ERROR", "message": "Dados inválidos", "details": [{ "path": "endsAt", "message": "duration must be at least 30 minutes" }] } }
+{ "error": { "code": "VALIDATION_ERROR", "message": "Dados inválidos", "details": [{ "path": "endsAt", "message": "duration must be at least 1 hour" }] } }
 ```
 
 `details` é opcional. Em `VALIDATION_ERROR` é uma lista de `{ path, message }` (`ValidationIssue`). Códigos (`ERROR_CODES`):
@@ -165,8 +165,8 @@ Response 200:
     "id": "b1", "courtId": "c1",
     "court": { "id": "c1", "name": "Quadra 1", "sport": "VOLEI" },
     "customerName": "Ana", "customerPhone": "11999990000",
-    "startsAt": "2026-11-02T18:00:00-03:00", "endsAt": "2026-11-02T19:30:00-03:00",
-    "status": "PENDING", "price": 120
+    "startsAt": "2026-11-02T18:00:00-03:00", "endsAt": "2026-11-02T20:00:00-03:00",
+    "status": "PENDING", "price": 160
   }
 ] }
 ```
@@ -188,8 +188,8 @@ Body (`createBookingSchema`):
 Validações de intervalo (erro reportado em `endsAt`):
 
 - `endsAt` > `startsAt`
-- `startsAt` alinhado à grade de 30 min no horário local (minutos `:00` ou `:30`, segundos e milissegundos zero); como a duração é múltipla de 30 min, `endsAt` também fica alinhado
-- duração mínima 30 min, múltipla de 30 min, máxima 4 h
+- `startsAt` em hora cheia no horário local (minuto `:00`, segundos e milissegundos zero); como a duração é múltipla de 1 h, `endsAt` também fica em hora cheia
+- duração mínima 1 h, múltipla de 1 h (horas inteiras), máxima 4 h
 - início e fim no mesmo dia local (São Paulo)
 - dentro do horário de funcionamento: início >= 07:00 e fim <= 23:00 locais
 
@@ -199,10 +199,10 @@ Request:
 
 ```json
 { "courtId": "c1", "customerName": "Ana", "customerPhone": "11999990000",
-  "startsAt": "2026-11-02T18:00:00-03:00", "endsAt": "2026-11-02T19:30:00-03:00" }
+  "startsAt": "2026-11-02T18:00:00-03:00", "endsAt": "2026-11-02T20:00:00-03:00" }
 ```
 
-Response 201: objeto `Booking` (como acima), `price` = 80 * 1.5 = `120`.
+Response 201: objeto `Booking` (como acima), `price` = 80 * 2 = `160`.
 
 Conflito, response 409:
 
@@ -438,8 +438,8 @@ Duas reservas conflitam se são da **mesma quadra**, ambas **não `CANCELLED`**,
 
 ### Duração e horário
 
-- Duração: mínimo 30 min, múltiplos de 30 min, máximo 4 h.
-- Início alinhado à grade de 30 min (`:00` ou `:30`, sem segundos/ms).
+- Duração: mínimo 1 h, múltiplos de 1 h (horas inteiras), máximo 4 h.
+- Início em hora cheia no horário local (`:00`, sem segundos/ms).
 - Funcionamento: 07:00 a 23:00 (America/Sao_Paulo), 16 h por dia. Reserva não atravessa meia-noite.
 
 ### Cálculo de valores

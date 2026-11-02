@@ -18,7 +18,7 @@ describe("GET /api/dashboard/summary", () => {
     await makeCourt({ name: "Inativa", active: false });
 
     await book(c1.id, "10:00", "12:00", "CONFIRMED"); // 160, 2h
-    await book(c1.id, "14:00", "15:30", "DONE"); // 120, 1.5h
+    await book(c1.id, "14:00", "16:00", "DONE"); // 160, 2h
     await book(c1.id, "16:00", "17:00"); // PENDING: conta, sem receita, 1h
     await book(c1.id, "18:00", "19:00", "CANCELLED"); // não conta
     // outro dia: não conta
@@ -47,10 +47,10 @@ describe("GET /api/dashboard/summary", () => {
     const d = res.body.data;
     expect(d.date).toBe(day);
     expect(d.bookingsCount).toBe(3);
-    expect(d.revenue).toBe(160 + 120 + 17.5);
+    expect(d.revenue).toBe(160 + 160 + 17.5);
     expect(d.openOrdersCount).toBe(2);
-    // 4.5h / (2 quadras ativas x 16h)
-    expect(d.occupancyRate).toBeCloseTo(4.5 / 32, 4);
+    // 5h / (2 quadras ativas x 16h)
+    expect(d.occupancyRate).toBeCloseTo(5 / 32, 4);
     expect(d.upcomingBookings.map((b: { startsAt: string }) => Date.parse(b.startsAt))).toEqual([
       Date.parse(at("10:00")),
       Date.parse(at("14:00")),

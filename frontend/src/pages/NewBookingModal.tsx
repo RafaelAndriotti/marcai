@@ -8,7 +8,7 @@ const OPEN = 7 * 60
 const CLOSE = 23 * 60
 
 const START_OPTIONS: number[] = []
-for (let m = OPEN; m < CLOSE; m += 30) START_OPTIONS.push(m)
+for (let m = OPEN; m < CLOSE; m += BOOKING_DURATION.stepMinutes) START_OPTIONS.push(m)
 
 const DURATION_OPTIONS: number[] = []
 for (let m = BOOKING_DURATION.minMinutes; m <= BOOKING_DURATION.maxMinutes; m += BOOKING_DURATION.stepMinutes) {
@@ -20,9 +20,10 @@ const durationLabel = (m: number): string =>
 
 const MESSAGE_MAP: [string, string][] = [
   ['business hours', 'O horário deve estar dentro do funcionamento (07:00 às 23:00).'],
-  ['at least 30', 'A duração mínima é de 30 minutos.'],
+  ['at least 1 hour', 'A duração mínima é de 1 hora.'],
   ['at most 4', 'A duração máxima é de 4 horas.'],
-  ['multiple of 30', 'A duração deve ser múltipla de 30 minutos.'],
+  ['multiple of 1 hour', 'A duração deve ser em horas inteiras (1h, 2h, 3h ou 4h).'],
+  ['full hour', 'O horário de início deve ser em hora cheia (:00).'],
   ['same local day', 'A reserva deve começar e terminar no mesmo dia.'],
   ['after startsAt', 'O término deve ser depois do início.'],
   ['must not contain', 'O nome contém caracteres inválidos.'],
