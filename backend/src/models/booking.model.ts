@@ -81,6 +81,12 @@ export const bookingModel = {
     return n > 0;
   },
 
+  /** Existe reserva não cancelada na quadra futura ou em andamento (término > agora)? */
+  async hasUpcoming(db: Tx, courtId: string, now: Date): Promise<boolean> {
+    const n = await db.booking.count({ where: { courtId, status: { not: "CANCELLED" }, endsAt: { gt: now } } });
+    return n > 0;
+  },
+
   /** Trava a linha da quadra para serializar checagem+insert por quadra. */
   async lockCourt(
     db: Tx,

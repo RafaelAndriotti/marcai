@@ -52,7 +52,8 @@ export const bookingService = {
       if (!current) throw AppError.notFound("Reserva não encontrada");
 
       if (current.status === "CANCELLED" && status !== "CANCELLED") {
-        await bookingModel.lockCourt(tx, current.courtId);
+        const court = await bookingModel.lockCourt(tx, current.courtId);
+        if (!court?.active) throw AppError.validation("courtId", "court is inactive");
         const conflict = await bookingModel.hasConflict(
           tx,
           current.courtId,

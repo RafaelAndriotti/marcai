@@ -26,6 +26,7 @@ const MESSAGE_MAP: [string, string][] = [
   ['same local day', 'A reserva deve começar e terminar no mesmo dia.'],
   ['after startsAt', 'O término deve ser depois do início.'],
   ['must not contain', 'O nome contém caracteres inválidos.'],
+  ['court is inactive', 'Esta quadra foi removida. Atualize a página e escolha outra quadra.'],
 ]
 
 /** Converte um erro da API em mensagens amigáveis em pt-BR. */
