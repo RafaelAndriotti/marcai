@@ -1,13 +1,15 @@
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface Props {
   title: string
   description?: string
   icon?: LucideIcon
+  action?: ReactNode
 }
 
 /** Uma frase dentro de uma caixa tracejada, no quadro do bloco que ficou vazio. */
-export function EmptyState({ title, description, icon: Icon }: Props) {
+export function EmptyState({ title, description, icon: Icon, action }: Props) {
   return (
     <div className="m-4 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-dashed border-control px-4 py-6 text-center">
       <p className="flex items-center gap-2 text-sm font-medium">
@@ -15,6 +17,7 @@ export function EmptyState({ title, description, icon: Icon }: Props) {
         {title}
       </p>
       {description && <p className="max-w-sm text-sm text-muted">{description}</p>}
+      {action}
     </div>
   )
 }

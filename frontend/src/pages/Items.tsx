@@ -1,27 +1,24 @@
 import type { Product } from '@marcai/shared'
 import { Package, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { EmptyState } from '../components/EmptyState'
 import { ErrorState } from '../components/ErrorState'
 import { Modal } from '../components/Modal'
 import { PageHeader } from '../components/PageHeader'
 import { Skeleton } from '../components/Skeleton'
-import { Tabs, type TabItem } from '../components/Tabs'
 import { useFetch } from '../hooks/useFetch'
 import { formatBRL, formatMargin, plural } from '../lib/format'
+import { DEFAULT_FILTERS, filterItems, isDefaultFilters, type ItemFilters, type StatusFilter } from '../lib/itemFilter'
 import { ApiError, deleteProduct, getCategories, getProducts } from '../services/api'
 import { CategoryModal } from './CategoryModal'
 import { ProductModal } from './ProductModal'
 
-/** 'ALL' ou o id da categoria. */
-type Filter = string
-
 const COLS = 'sm:grid-cols-[minmax(0,1fr)_6.5rem_5rem_6rem_5rem_6rem_6rem_4rem]'
 
 export function Items() {
-  const [filter, setFilter] = useState<Filter>('ALL')
-  // Busca todos uma vez: as contagens das abas vêm das linhas de cada categoria.
-  const { data, error, loading, refetch } = useFetch(() => getProducts(), [])
+  const [filters, setFilters] = useState<ItemFilters>(DEFAULT_FILTERS)
+  // Busca todos (inclusive excluídos) uma vez; filtros são aplicados no cliente.
+  const { data, error, loading, refetch } = useFetch(() => getProducts(undefined, 'all'), [])
   const categories = useFetch(() => getCategories(), [])
   const [modal, setModal] = useState<{ product?: Product } | null>(null)
   const [catModal, setCatModal] = useState(false)
@@ -54,18 +51,15 @@ export function Items() {
     }
   }
 
-  const count = (f: Filter) => (data ? data.filter((p) => f === 'ALL' || p.categoryId === f).length : undefined)
-  const tabs: TabItem<Filter>[] = [
-    { id: 'ALL', label: 'Todos', count: count('ALL') },
-    ...(categories.data ?? []).map((c) => ({ id: c.id, label: c.name, count: count(c.id) })),
-  ]
-
-  const rows = data?.filter((p) => filter === 'ALL' || p.categoryId === filter) ?? []
-  const active = rows.filter((p) => p.active).length
+  const rows = data ? filterItems(data, filters) : []
+  const filtered = !isDefaultFilters(filters)
+  const searchRef = useRef<HTMLInputElement>(null)
+  const clear = () => {
+    setFilters(DEFAULT_FILTERS)
+    searchRef.current?.focus()
+  }
   const description = data
-    ? rows.length === 0
-      ? 'Nenhum item nesta visão'
-      : `${rows.length} ${plural(rows.length, 'item', 'itens')}, ${active} ${plural(active, 'ativo', 'ativos')}`
+    ? `${rows.length} ${plural(rows.length, 'item', 'itens')}`
     : error
       ? 'Itens indisponíveis'
       : undefined
@@ -92,9 +86,66 @@ export function Items() {
           </>
         }
       />
-      <Tabs tabs={tabs} value={filter} onChange={setFilter} label="Categorias dos itens" panelId="items-panel" />
+      <p className="sr-only" aria-live="polite">
+        {data ? `${rows.length} ${plural(rows.length, 'item', 'itens')}` : ''}
+      </p>
+      <div className="mb-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_12rem_12rem_auto] sm:items-end">
+        <div>
+          <label htmlFor="items-q" className="mb-1.5 block text-sm font-medium">
+            Buscar item
+          </label>
+          <input
+            id="items-q"
+            ref={searchRef}
+            type="search"
+            className="field"
+            value={filters.text}
+            onChange={(e) => setFilters({ ...filters, text: e.target.value })}
+          />
+        </div>
+        <div>
+          <label htmlFor="items-cat" className="mb-1.5 block text-sm font-medium">
+            Categoria
+          </label>
+          <select
+            id="items-cat"
+            className="field"
+            value={filters.categoryId}
+            onChange={(e) => setFilters({ ...filters, categoryId: e.target.value })}
+          >
+            <option value="">Todas as categorias</option>
+            {(categories.data ?? []).map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="items-status" className="mb-1.5 block text-sm font-medium">
+            Situação
+          </label>
+          <select
+            id="items-status"
+            className="field"
+            value={filters.status}
+            onChange={(e) => setFilters({ ...filters, status: e.target.value as StatusFilter })}
+          >
+            <option value="active">Ativos</option>
+            <option value="in-stock">Com estoque</option>
+            <option value="out-of-stock">Estoque zerado</option>
+            <option value="deleted">Excluídos</option>
+            <option value="all">Todas</option>
+          </select>
+        </div>
+        {filtered && (
+          <button type="button" className="btn-text justify-self-start sm:h-10" onClick={clear}>
+            Limpar filtros
+          </button>
+        )}
+      </div>
 
-      <div id="items-panel" role="tabpanel" aria-labelledby={`items-panel-tab-${filter}`}>
+      <div>
         <div
           aria-hidden="true"
           className={`hidden h-9 items-center gap-x-4 px-2 text-[13px] text-muted sm:grid ${COLS}`}
@@ -123,11 +174,18 @@ export function Items() {
         ) : rows.length === 0 ? (
           <EmptyState
             icon={Package}
-            title={filter === 'ALL' ? 'Nenhum item cadastrado' : 'Nenhum item nesta categoria'}
+            title={filtered ? 'Nenhum item encontrado' : 'Nenhum item cadastrado'}
             description={
-              filter === 'ALL'
-                ? 'Cadastre o primeiro item do bar para registrar pedidos.'
-                : 'Escolha outra aba para ver os demais itens.'
+              filtered
+                ? 'Ajuste a busca ou limpe os filtros.'
+                : 'Cadastre o primeiro item do bar para registrar pedidos.'
+            }
+            action={
+              filtered ? (
+                <button type="button" className="btn-text mt-2" onClick={clear}>
+                  Limpar filtros
+                </button>
+              ) : undefined
             }
           />
         ) : (
@@ -163,9 +221,11 @@ export function Items() {
                     className={`size-1.5 rounded-full ${p.active ? 'bg-primary' : 'bg-control'}`}
                     aria-hidden="true"
                   />
-                  {p.active ? 'Ativo' : 'Inativo'}
+                  {p.active ? 'Ativo' : 'Excluído'}
                 </span>
                 <span className="text-right sm:order-none">
+                  {p.active && (
+                    <>
                   <button
                     type="button"
                     className="btn-text"
@@ -186,6 +246,8 @@ export function Items() {
                   >
                     Excluir
                   </button>
+                    </>
+                  )}
                 </span>
               </li>
             ))}
@@ -210,7 +272,7 @@ export function Items() {
           onCreated={(c) => {
             setCatModal(false)
             categories.refetch()
-            setFilter(c.id)
+            setFilters({ ...DEFAULT_FILTERS, categoryId: c.id })
           }}
         />
       )}

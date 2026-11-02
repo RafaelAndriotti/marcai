@@ -54,5 +54,6 @@ export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 
 export const listProductsQuerySchema = z.object({
   categoryId: z.string().min(1).optional(),
+  status: z.enum(["active", "inactive", "all"]).default("active"),
 });
 export type ListProductsQuery = z.infer<typeof listProductsQuerySchema>;

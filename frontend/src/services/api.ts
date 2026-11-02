@@ -84,8 +84,8 @@ export const updateBookingStatus = (id: string, status: BookingStatus) =>
     method: 'PATCH',
     body: JSON.stringify({ status }),
   })
-export const getProducts = (categoryId?: string) =>
-  request<Product[]>(`/products${qs({ categoryId })}`)
+export const getProducts = (categoryId?: string, status?: 'active' | 'inactive' | 'all') =>
+  request<Product[]>(`/products${qs({ categoryId, status })}`)
 export const deleteProduct = (id: string) =>
   request<void>(`/products/${encodeURIComponent(id)}`, { method: 'DELETE' })
 export const getCategories = () => request<Category[]>('/categories')

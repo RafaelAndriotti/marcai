@@ -41,6 +41,25 @@ describe("GET /api/products", () => {
   });
 });
 
+describe("GET /api/products?status", () => {
+  const names = async (q: string) =>
+    (await api().get(`/api/products${q}`)).body.data.map((p: { name: string }) => p.name);
+
+  it("active (default), inactive e all", async () => {
+    await makeProduct({ name: "On" });
+    const off = await makeProduct({ name: "Off" });
+    await api().delete(`/api/products/${off.id}`);
+    expect(await names("")).toEqual(["On"]);
+    expect(await names("?status=active")).toEqual(["On"]);
+    expect(await names("?status=inactive")).toEqual(["Off"]);
+    expect(await names("?status=all")).toEqual(["Off", "On"]);
+  });
+
+  it("status inválido -> 400", async () => {
+    expect((await api().get("/api/products?status=x")).status).toBe(400);
+  });
+});
+
 describe("POST /api/products", () => {
   it("cria 201 com active true", async () => {
     const res = await api().post("/api/products").send(valid);

@@ -18,9 +18,12 @@ export function toProductDto(p: DbProduct & { category: DbCategory }): Product {
 }
 
 export const productModel = {
-  async list(query: ListProductsQuery = {}): Promise<Product[]> {
+  async list(query: Partial<ListProductsQuery> = {}): Promise<Product[]> {
     const rows = await prisma.product.findMany({
-      where: { active: true, ...(query.categoryId ? { categoryId: query.categoryId } : {}) },
+      where: {
+        ...(query.status === "all" ? {} : { active: query.status !== "inactive" }),
+        ...(query.categoryId ? { categoryId: query.categoryId } : {}),
+      },
       orderBy: { name: "asc" },
       include: { category: true },
     });
