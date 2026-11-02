@@ -3,7 +3,7 @@
 export const TIMEZONE = "America/Sao_Paulo";
 
 /** Horário de funcionamento (07:00-23:00), em minutos locais de TIMEZONE. */
-export const BUSINESS_HOURS_MINUTES = { open: 7 * 60, close: 23 * 60 } as const;
+const BUSINESS_HOURS_MINUTES = { open: 7 * 60, close: 23 * 60 } as const;
 /** Horas funcionais por dia (usado no occupancyRate). */
 export const BUSINESS_HOURS_PER_DAY = (BUSINESS_HOURS_MINUTES.close - BUSINESS_HOURS_MINUTES.open) / 60;
 

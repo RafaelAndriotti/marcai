@@ -17,7 +17,7 @@ export function priceError(raw: string, label = 'o preço'): string {
   const Cap = label.charAt(0).toUpperCase() + label.slice(1)
   const s = clean(raw)
   if (!s) return `Informe ${label}.`
-  if (/^-/.test(s)) return `${Cap} deve ser maior que zero.`
+  if (s.startsWith('-')) return `${Cap} deve ser maior que zero.`
   const n = parsePrice(raw)
   if (n === undefined) return 'Use só números, com vírgula para os centavos. Exemplo: 12,50.'
   if (n <= 0) return `${Cap} deve ser maior que zero.`

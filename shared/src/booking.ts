@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeNameSchema } from "./category.js";
 import { validateBookingInterval } from "./rules.js";
 import { bookingStatusSchema, type BookingStatus, type Sport } from "./enums.js";
 
@@ -18,8 +19,9 @@ export interface Booking {
 export const createBookingSchema = z
   .object({
     courtId: z.string().min(1),
-    customerName: z.string().trim().min(1).max(80),
-    customerPhone: z.string().trim().min(1).max(30),
+    customerName: safeNameSchema(80),
+    customerPhone: z.string().trim().regex(/^[0-9 ()+-]{8,20}$/, "Telefone inválido")
+      .refine((s) => (s.match(/\d/g) ?? []).length >= 8, "Telefone inválido"),
     startsAt: z.iso.datetime({ offset: true }),
     endsAt: z.iso.datetime({ offset: true }),
   })

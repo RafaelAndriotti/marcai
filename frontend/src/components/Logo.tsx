@@ -1,5 +1,5 @@
 /** Quadra vista de cima: linhas laterais, rede ao centro, áreas de saque. Decorativo; o nome é o texto "Marcaí". */
-export function LogoMark({ className = 'size-6' }: { className?: string }) {
+function LogoMark({ className = 'size-6' }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"

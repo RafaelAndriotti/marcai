@@ -4,7 +4,7 @@ import type { DayRange, Tx } from "./booking.model.js";
 
 type DbOrder = Prisma.OrderGetPayload<{ include: { items: true } }>;
 
-export function toOrderDto(o: DbOrder): Order {
+function toOrderDto(o: DbOrder): Order {
   return {
     id: o.id,
     bookingId: o.bookingId,
@@ -23,7 +23,7 @@ export function toOrderDto(o: DbOrder): Order {
   };
 }
 
-export interface NewOrderData {
+interface NewOrderData {
   bookingId: string | null;
   customerName: string | null;
   total: Prisma.Decimal;

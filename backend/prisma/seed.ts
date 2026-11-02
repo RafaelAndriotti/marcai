@@ -11,8 +11,11 @@ const days = { today, tomorrow } as const;
 const at = (date: string, hhmm: string): Date => new Date(`${date}T${hhmm}:00-03:00`);
 
 async function main(): Promise<void> {
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("Seed apaga todas as tabelas e não pode rodar com NODE_ENV=production.");
+  const dbName = new URL(process.env.DATABASE_URL ?? "").pathname.slice(1);
+  if (!/_(dev|test)$/.test(dbName) && process.env.ALLOW_DESTRUCTIVE_SEED !== "1") {
+    throw new Error(
+      `Seed apaga todas as tabelas e o banco "${dbName}" não termina em _dev/_test. Se for o banco de desenvolvimento, rode com ALLOW_DESTRUCTIVE_SEED=1.`,
+    );
   }
   // idempotente: limpa e recria
   await prisma.orderItem.deleteMany();

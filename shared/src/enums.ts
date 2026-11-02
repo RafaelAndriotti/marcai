@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const SPORTS = ["VOLEI", "BEACH_TENNIS", "FUTEVOLEI"] as const;
+const SPORTS = ["VOLEI", "BEACH_TENNIS", "FUTEVOLEI"] as const;
 export const sportSchema = z.enum(SPORTS);
 export type Sport = z.infer<typeof sportSchema>;
 export const SPORT_LABELS: Record<Sport, string> = {
@@ -19,7 +19,7 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   DONE: "Concluída",
 };
 
-export const ORDER_STATUSES = ["OPEN", "PAID", "CANCELLED"] as const;
+const ORDER_STATUSES = ["OPEN", "PAID", "CANCELLED"] as const;
 export const orderStatusSchema = z.enum(ORDER_STATUSES);
 export type OrderStatus = z.infer<typeof orderStatusSchema>;
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

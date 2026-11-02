@@ -237,4 +237,12 @@ describe("PATCH /api/bookings/:id/status", () => {
       .send(bookingBody(court.id, "10:00", "11:00", { customerName: "x".repeat(81) }));
     expect(res.status).toBe(400);
   });
+
+  it("recusa telefone sem 8 dígitos", async () => {
+    const court = await makeCourt();
+    const res = await api()
+      .post("/api/bookings")
+      .send(bookingBody(court.id, "10:00", "11:00", { customerPhone: "--------" }));
+    expect(res.status).toBe(400);
+  });
 });

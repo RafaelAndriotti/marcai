@@ -202,3 +202,15 @@ describe("erro 500", () => {
   });
 });
 
+
+describe("proteção contra DNS rebinding", () => {
+  it("Host estranho -> 403 FORBIDDEN", async () => {
+    const res = await api().get("/api/health").set("Host", "evil.com");
+    expect(res.status).toBe(403);
+    expect(res.body.error.code).toBe("FORBIDDEN");
+  });
+
+  it("Host local -> 200", async () => {
+    expect((await api().get("/api/health")).status).toBe(200);
+  });
+});

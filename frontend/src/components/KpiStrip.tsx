@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Skeleton } from './Skeleton'
 
-export interface Kpi {
+interface Kpi {
   label: string
   /** undefined enquanto carrega; null quando o dado não existe (vira "–"). */
   value: string | null | undefined

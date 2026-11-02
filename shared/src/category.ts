@@ -22,7 +22,7 @@ export const safeNameSchema = (max: number) =>
         }),
     );
 
-export const MAX_CATEGORY_NAME = 40;
+const MAX_CATEGORY_NAME = 40;
 /** Teto de categorias (POST /categories -> 409 CATEGORY_LIMIT_REACHED). */
 export const MAX_CATEGORIES = 50;
 export const createCategorySchema = z.object({ name: safeNameSchema(MAX_CATEGORY_NAME) });

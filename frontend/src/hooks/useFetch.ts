@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../services/api'
 
-export interface FetchState<T> {
+interface FetchState<T> {
   data: T | undefined
   error: ApiError | undefined
   loading: boolean

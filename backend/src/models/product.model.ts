@@ -3,7 +3,7 @@ import { prisma, type Prisma } from "../config/prisma.js";
 import type { Category as DbCategory, Product as DbProduct } from "../../generated/prisma/client.js";
 import type { Tx } from "./booking.model.js";
 
-export function toProductDto(p: DbProduct & { category: DbCategory }): Product {
+function toProductDto(p: DbProduct & { category: DbCategory }): Product {
   return {
     id: p.id,
     name: p.name,

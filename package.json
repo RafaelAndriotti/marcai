@@ -13,10 +13,11 @@
     "dev": "concurrently -n backend,frontend -c blue,green \"npm -w backend run dev\" \"npm -w frontend run dev\"",
     "dev:backend": "npm -w backend run dev",
     "dev:frontend": "npm -w frontend run dev",
-    "build": "npm -w shared run build --if-present && npm -w backend run build --if-present && npm -w frontend run build --if-present",
+    "build": "npm run typecheck && npm -w frontend run build",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm -w backend test && npm -w frontend test",
     "db:migrate": "npm -w backend run db:migrate",
+    "db:deploy": "npm -w backend run db:deploy",
     "db:seed": "npm -w backend run db:seed"
   },
   "keywords": [],

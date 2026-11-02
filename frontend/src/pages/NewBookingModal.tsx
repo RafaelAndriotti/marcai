@@ -25,10 +25,11 @@ const MESSAGE_MAP: [string, string][] = [
   ['multiple of 30', 'A duração deve ser múltipla de 30 minutos.'],
   ['same local day', 'A reserva deve começar e terminar no mesmo dia.'],
   ['after startsAt', 'O término deve ser depois do início.'],
+  ['must not contain', 'O nome contém caracteres inválidos.'],
 ]
 
 /** Converte um erro da API em mensagens amigáveis em pt-BR. */
-export function friendlyBookingError(e: unknown): string[] {
+function friendlyBookingError(e: unknown): string[] {
   if (!(e instanceof ApiError)) return ['Não foi possível criar a reserva. Tente novamente.']
   switch (e.code) {
     case 'BOOKING_CONFLICT':

@@ -2,7 +2,7 @@ import type { Court, CreateCourtInput } from "@marcai/shared";
 import { prisma } from "../config/prisma.js";
 import type { Court as DbCourt } from "../../generated/prisma/client.js";
 
-export function toCourtDto(c: DbCourt): Court {
+function toCourtDto(c: DbCourt): Court {
   return {
     id: c.id,
     name: c.name,

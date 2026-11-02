@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { safeNameSchema } from "./category.js";
 import { moneySchema } from "./money.js";
 import { sportSchema, type Sport } from "./enums.js";
 
@@ -12,7 +13,7 @@ export interface Court {
 }
 
 export const createCourtSchema = z.object({
-  name: z.string().trim().min(1),
+  name: safeNameSchema(80),
   sport: sportSchema,
   pricePerHour: moneySchema,
   active: z.boolean().optional(),

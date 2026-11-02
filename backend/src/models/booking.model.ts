@@ -2,12 +2,12 @@ import type { Booking, BookingStatus } from "@marcai/shared";
 import { prisma, type Prisma } from "../config/prisma.js";
 
 const withCourt = { court: { select: { id: true, name: true, sport: true } } } as const;
-export type DbBookingWithCourt = Prisma.BookingGetPayload<{ include: typeof withCourt }>;
+type DbBookingWithCourt = Prisma.BookingGetPayload<{ include: typeof withCourt }>;
 
 /** Cliente de transação do Prisma. */
 export type Tx = Prisma.TransactionClient;
 
-export function toBookingDto(b: DbBookingWithCourt): Booking {
+function toBookingDto(b: DbBookingWithCourt): Booking {
   return {
     id: b.id,
     courtId: b.courtId,
