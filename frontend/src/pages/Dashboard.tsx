@@ -152,7 +152,7 @@ export function Dashboard() {
                     caption: 'das 16 h de cada quadra ativa',
                     extra: s && (
                       <div
-                        className="mt-1 h-1 overflow-hidden rounded-sm bg-primary-soft"
+                        className="mt-1 h-1 overflow-hidden rounded-sm bg-surface-2"
                         role="img"
                         aria-label={`Ocupação de ${formatPercent(s.occupancyRate)}`}
                       >
@@ -231,7 +231,7 @@ export function Dashboard() {
                     >
                       <span className="truncate text-sm">{c.name}</span>
                       <div
-                        className="h-1.5 overflow-hidden rounded-sm bg-primary-soft"
+                        className="h-1.5 overflow-hidden rounded-sm bg-surface-2"
                         role="img"
                         aria-label={`${formatHours(h)} de ${HOURS_PER_COURT} h`}
                       >

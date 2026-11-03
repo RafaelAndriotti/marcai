@@ -1,60 +1,33 @@
 @import "tailwindcss";
 
 /*
- * Tokens semânticos (estilo accent-ladder, semente 1012089804).
- * Matiz cheio (emerald) só em marcas pequenas: botão primário, borda e dado das reservas,
- * ícone da navegação ativa. Os tons 50-200 fazem o trabalho das áreas.
- * Fundo um passo em direção ao tom mais pálido do emerald. Claro por padrão; escuro via prefers-color-scheme.
+ * Tokens semânticos: tema escuro neutro. Superfícies separadas por um passo de luminosidade;
+ * o emerald fica só nos dados (reservas, ocupação, status) e no foco. O botão primário é branco invertido.
+ * Contrastes: fg/bg 17:1, muted/surface-2 6.6:1, control/surface 3.1:1.
  */
 :root {
-  color-scheme: light dark;
-  --bg: #f6faf8;
-  --surface: #ffffff;
-  --surface-2: #edf3f0;
-  --line: #e3eae6;
-  --line-soft: #edf2ef;
-  --control: #c5d1cb;
-  --fg: #10201a;
-  --muted: #52625a;
-  --primary: #047857; /* emerald-700, 5.5:1 com branco */
-  --primary-hover: #065f46;
-  --primary-fg: #ffffff;
-  --primary-soft: #d1fae5; /* emerald-100 */
-  --primary-wash: #ecfdf5; /* emerald-50 */
-  --primary-ink: #064e3b; /* emerald-900 */
-  --warn-soft: #fef3c7;
-  --warn-fg: #92400e;
-  --danger: #b91c1c;
-  --danger-soft: #fee2e2;
-  --danger-fg: #991b1b;
-  --neutral-soft: #e1e9e5;
-  --neutral-fg: #34443c;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0a1410;
-    --surface: #0f1b16;
-    --surface-2: #16251f;
-    --line: #1f3029;
-    --line-soft: #172720;
-    --control: #35493f;
-    --fg: #ecf5f0;
-    --muted: #9db1a7;
-    --primary: #34d399; /* emerald-400 */
-    --primary-hover: #6ee7b7;
-    --primary-fg: #04251a;
-    --primary-soft: #12362a;
-    --primary-wash: #123327;
-    --primary-ink: #a7f3d0;
-    --warn-soft: #3b2a0a;
-    --warn-fg: #fcd34d;
-    --danger: #f87171;
-    --danger-soft: #3f1518;
-    --danger-fg: #fca5a5;
-    --neutral-soft: #273b31;
-    --neutral-fg: #c4d3cb;
-  }
+  color-scheme: dark;
+  --bg: #0f0f0f;
+  --surface: #161616;
+  --surface-2: #222222;
+  --line: #2a2a2a;
+  --line-soft: #1f1f1f;
+  --control: #666666;
+  --fg: #f2f2f2;
+  --muted: #a6a6a6;
+  --primary: #34d399; /* emerald-400 */
+  --primary-hover: #6ee7b7;
+  --primary-fg: #04251a;
+  --primary-soft: #12362a;
+  --primary-wash: #10291f;
+  --primary-ink: #a7f3d0;
+  --warn-soft: #3b2a0a;
+  --warn-fg: #fcd34d;
+  --danger: #f87171;
+  --danger-soft: #3f1518;
+  --danger-fg: #fca5a5;
+  --neutral-soft: #262626;
+  --neutral-fg: #c8c8c8;
 }
 
 @theme inline {
@@ -99,15 +72,15 @@
   }
 }
 
-/* Botões e controles: 32px nas barras, 40px nos formulários. Dois raios: 8px e 4px. */
+/* Botões e controles: 32px nas barras, 40px nos formulários. Raios: 6px (controles), 8px (painéis). */
 @utility btn {
-  @apply inline-flex h-8 items-center justify-center gap-2 rounded-lg px-3 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex h-8 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium whitespace-nowrap transition-colors disabled:cursor-not-allowed disabled:opacity-60;
 }
 @utility btn-lg {
   @apply h-10 px-4;
 }
 @utility btn-primary {
-  @apply btn bg-primary text-primary-fg hover:bg-primary-hover;
+  @apply btn bg-fg text-bg hover:bg-white;
 }
 @utility btn-ghost {
   @apply btn border border-control bg-surface text-fg hover:bg-surface-2;
@@ -119,10 +92,10 @@
   @apply inline-flex items-center gap-1 rounded-sm text-sm font-medium text-fg underline-offset-4 hover:underline;
 }
 @utility field {
-  @apply h-10 w-full rounded-lg border border-control bg-surface px-3 text-sm text-fg placeholder:text-muted;
+  @apply h-10 w-full rounded-md border border-control bg-surface px-3 text-sm text-fg placeholder:text-muted;
 }
 @utility field-sm {
-  @apply h-8 rounded-lg border border-control bg-surface px-2.5 text-sm text-fg;
+  @apply h-8 rounded-md border border-control bg-surface px-2.5 text-sm text-fg;
 }
 @utility panel {
   @apply rounded-lg border border-line bg-surface;

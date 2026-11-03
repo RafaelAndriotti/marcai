@@ -27,7 +27,7 @@ export function Sidebar({ open, onClose }: Props) {
       )}
       <aside
         id="sidebar"
-        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col bg-bg px-3 transition-transform max-lg:border-r max-lg:border-line lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-60 flex-col border-r border-line bg-bg px-3 transition-transform lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -50,27 +50,30 @@ export function Sidebar({ open, onClose }: Props) {
               end={to === '/'}
               onClick={onClose}
               className={({ isActive }) =>
-                `flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors ${
+                `flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors ${
                   isActive
-                    ? 'bg-primary-soft font-medium text-primary-ink'
+                    ? 'bg-surface-2 font-medium text-fg'
                     : 'text-muted hover:bg-surface-2 hover:text-fg'
                 }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  <Icon
-                    className={`size-4 ${isActive ? 'text-primary' : ''}`}
-                    strokeWidth={1.5}
-                    aria-hidden="true"
-                  />
-                  {label}
-                </>
-              )}
+              <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              {label}
             </NavLink>
           ))}
         </nav>
-        <p className="mt-auto px-2.5 py-4 text-xs text-muted">Painel da arena</p>
+        <div className="mt-auto flex items-center gap-3 px-2.5 py-4">
+          <span
+            className="grid size-8 place-items-center rounded-full bg-surface-2 text-sm font-medium"
+            aria-hidden="true"
+          >
+            A
+          </span>
+          <div className="leading-4">
+            <p className="text-sm font-medium">Admin</p>
+            <p className="text-xs text-muted">Painel da arena</p>
+          </div>
+        </div>
       </aside>
     </>
   )
