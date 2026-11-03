@@ -36,18 +36,18 @@ async function main(): Promise<void> {
 
   type Def = [court: number, day: keyof typeof days, from: string, to: string, status: BookingStatus, name: string, phone: string];
   const defs: Def[] = [
-    [0, "today", "08:00", "09:30", "DONE", "Ana Souza", "11999990001"],
-    [0, "today", "18:00", "19:30", "CONFIRMED", "Bruno Lima", "11999990002"],
+    [0, "today", "08:00", "09:00", "DONE", "Ana Souza", "11999990001"],
+    [0, "today", "18:00", "19:00", "CONFIRMED", "Bruno Lima", "11999990002"],
     [0, "today", "20:00", "21:00", "PENDING", "Carla Dias", "11999990003"],
     [1, "today", "09:00", "10:00", "DONE", "Diego Alves", "11999990004"],
     [1, "today", "19:00", "21:00", "CONFIRMED", "Elisa Prado", "11999990005"],
-    [2, "today", "07:00", "08:30", "CANCELLED", "Fábio Reis", "11999990006"],
-    [2, "today", "19:30", "21:00", "PENDING", "Gabi Martins", "11999990007"],
+    [2, "today", "07:00", "08:00", "CANCELLED", "Fábio Reis", "11999990006"],
+    [2, "today", "19:00", "21:00", "PENDING", "Gabi Martins", "11999990007"],
     [3, "today", "17:00", "19:00", "CONFIRMED", "Hugo Neves", "11999990008"],
-    [0, "tomorrow", "10:00", "11:30", "CONFIRMED", "Iara Costa", "11999990009"],
+    [0, "tomorrow", "10:00", "11:00", "CONFIRMED", "Iara Costa", "11999990009"],
     [1, "tomorrow", "18:00", "19:00", "PENDING", "João Pires", "11999990010"],
     [2, "tomorrow", "20:00", "22:00", "CONFIRMED", "Karen Melo", "11999990011"],
-    [3, "tomorrow", "16:00", "17:30", "PENDING", "Leo Faria", "11999990012"],
+    [3, "tomorrow", "16:00", "17:00", "PENDING", "Leo Faria", "11999990012"],
   ];
 
   const bookings: Awaited<ReturnType<typeof prisma.booking.create>>[] = [];
