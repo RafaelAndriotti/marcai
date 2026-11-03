@@ -1,4 +1,5 @@
-import { CalendarDays, House, LayoutGrid, Martini, Package, X } from 'lucide-react'
+import { CalendarDays, House, LayoutGrid, Martini, Moon, Package, Sun, X } from 'lucide-react'
+import { useState } from 'react'
 import { NavLink } from 'react-router'
 import { Wordmark } from './Logo'
 
@@ -9,6 +10,31 @@ const NAV = [
   { to: '/pedidos', label: 'Pedidos', icon: Martini },
   { to: '/itens', label: 'Itens', icon: Package },
 ]
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState(() => document.documentElement.dataset.theme ?? 'dark')
+  const next = theme === 'dark' ? 'light' : 'dark'
+  const Icon = next === 'light' ? Sun : Moon
+  return (
+    <button
+      type="button"
+      className="ml-auto grid size-8 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-fg"
+      onClick={() => {
+        document.documentElement.dataset.theme = next
+        try {
+          localStorage.setItem('theme', next)
+        } catch {
+          // sem storage: vale só nesta aba
+        }
+        setTheme(next)
+      }}
+      aria-label={next === 'light' ? 'Usar tema claro' : 'Usar tema escuro'}
+      title={next === 'light' ? 'Tema claro' : 'Tema escuro'}
+    >
+      <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
+    </button>
+  )
+}
 
 interface Props {
   open: boolean
@@ -73,6 +99,7 @@ export function Sidebar({ open, onClose }: Props) {
             <p className="text-sm font-medium">Admin</p>
             <p className="text-xs text-muted">Painel da arena</p>
           </div>
+          <ThemeToggle />
         </div>
       </aside>
     </>

@@ -30,6 +30,32 @@
   --neutral-fg: #c8c8c8;
 }
 
+/* Tema claro: mesmos papéis. data-theme vem do script em index.html (preferência salva ou do sistema). */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg: #f9fafb;
+  --surface: #ffffff;
+  --surface-2: #f0f0f0;
+  --line: #e8e8e8;
+  --line-soft: #f2f2f2;
+  --control: #8c8c8c; /* 3.4:1 no branco */
+  --fg: #111111;
+  --muted: #5f6368;
+  --primary: #047857; /* emerald-700 */
+  --primary-hover: #065f46;
+  --primary-fg: #ffffff;
+  --primary-soft: #d1fae5;
+  --primary-wash: #ecfdf5;
+  --primary-ink: #064e3b;
+  --warn-soft: #fef3c7;
+  --warn-fg: #92400e;
+  --danger: #b91c1c;
+  --danger-soft: #fee2e2;
+  --danger-fg: #991b1b;
+  --neutral-soft: #ececec;
+  --neutral-fg: #3f3f3f;
+}
+
 @theme inline {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --color-bg: var(--bg);
@@ -80,7 +106,7 @@
   @apply h-10 px-4;
 }
 @utility btn-primary {
-  @apply btn bg-fg text-bg hover:bg-white;
+  @apply btn bg-fg text-bg hover:opacity-85;
 }
 @utility btn-ghost {
   @apply btn border border-control bg-surface text-fg hover:bg-surface-2;
