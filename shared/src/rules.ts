@@ -8,8 +8,8 @@ const BUSINESS_HOURS_MINUTES = { open: 7 * 60, close: 23 * 60 } as const;
 export const BUSINESS_HOURS_PER_DAY = (BUSINESS_HOURS_MINUTES.close - BUSINESS_HOURS_MINUTES.open) / 60;
 
 export const BOOKING_DURATION = {
-  minMinutes: 30,
-  stepMinutes: 30,
+  minMinutes: 60,
+  stepMinutes: 60,
   maxMinutes: 240,
 } as const;
 
@@ -44,15 +44,15 @@ export function validateBookingInterval(startsAt: string, endsAt: string): strin
   const e = new Date(endsAt);
   const durationMin = (e.getTime() - s.getTime()) / 60_000;
   if (!(durationMin > 0)) return "endsAt must be after startsAt";
-  if (durationMin < BOOKING_DURATION.minMinutes) return "duration must be at least 30 minutes";
+  if (durationMin < BOOKING_DURATION.minMinutes) return "duration must be at least 1 hour";
   if (durationMin > BOOKING_DURATION.maxMinutes) return "duration must be at most 4 hours";
   if (durationMin % BOOKING_DURATION.stepMinutes !== 0) {
-    return "duration must be a multiple of 30 minutes";
+    return "duration must be a multiple of 1 hour (whole hours)";
   }
   if (s.getTime() % 60_000 !== 0) return "startsAt must have zero seconds and milliseconds";
   const ls = toLocalParts(s);
   if (ls.minutes % BOOKING_DURATION.stepMinutes !== 0) {
-    return "startsAt must be on a 30-minute boundary (:00 or :30)";
+    return "startsAt must be on a full hour (:00)";
   }
   const le = toLocalParts(e);
   if (ls.date !== le.date) return "booking must start and end on the same local day";

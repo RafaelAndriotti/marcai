@@ -29,9 +29,9 @@ import { NewBookingModal } from './NewBookingModal'
 
 const OPEN = 7 * 60
 const CLOSE = 23 * 60
-const SLOT = 30
-const SLOTS = (CLOSE - OPEN) / SLOT // 32
-const ROW = 36 // px por linha de 30 min
+const SLOT = 60
+const SLOTS = (CLOSE - OPEN) / SLOT // 16
+const ROW = 72 // px por linha de 1 h
 const HEAD = 44 // px do cabeçalho de quadras
 const TIME_COL = 64 // px da coluna de horas
 
@@ -190,7 +190,7 @@ export function Agenda() {
                   className="sticky left-0 z-[6] bg-surface pt-1 pr-2 text-right text-xs leading-4 text-muted"
                   style={{ gridColumn: 1, gridRow: i + 2 }}
                 >
-                  {min % 60 === 0 && minutesToHHMM(min)}
+                  {minutesToHHMM(min)}
                 </div>
               )
             })}
@@ -203,11 +203,7 @@ export function Agenda() {
                   tabIndex={-1}
                   aria-label={`Reservar ${c.name} às ${minutesToHHMM(OPEN + i * SLOT)}`}
                   onClick={() => setCreating({ courtId: c.id, start: OPEN + i * SLOT })}
-                  className={`border-l border-line hover:bg-primary-wash ${
-                    (OPEN + i * SLOT) % 60 === 0
-                      ? 'border-t border-t-line'
-                      : 'border-t border-t-line-soft'
-                  }`}
+                  className="border-l border-t border-line hover:bg-primary-wash"
                   style={{ gridColumn: ci + 2, gridRow: i + 2 }}
                 />
               )),

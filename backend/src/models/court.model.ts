@@ -1,5 +1,6 @@
 import type { Court, CreateCourtInput } from "@marcai/shared";
 import { prisma } from "../config/prisma.js";
+import type { Tx } from "./booking.model.js";
 import type { Court as DbCourt } from "../../generated/prisma/client.js";
 
 function toCourtDto(c: DbCourt): Court {
@@ -28,6 +29,10 @@ export const courtModel = {
       },
     });
     return toCourtDto(row);
+  },
+
+  async deactivate(tx: Tx, id: string): Promise<void> {
+    await tx.court.update({ where: { id }, data: { active: false } });
   },
 
   async listActiveIds(): Promise<string[]> {

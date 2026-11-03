@@ -6,6 +6,7 @@ import type {
   Category,
   CreateBookingInput,
   CreateCategoryInput,
+  CreateCourtInput,
   CreateOrderInput,
   CreateProductInput,
   DashboardSummary,
@@ -75,6 +76,10 @@ function qs(params: Record<string, string | undefined>): string {
 }
 
 export const getCourts = () => request<Court[]>('/courts')
+export const createCourt = (input: CreateCourtInput) =>
+  request<Court>('/courts', { method: 'POST', body: JSON.stringify(input) })
+export const deleteCourt = (id: string) =>
+  request<void>(`/courts/${encodeURIComponent(id)}`, { method: 'DELETE' })
 export const getBookings = (date: string, courtId?: string) =>
   request<Booking[]>(`/bookings${qs({ date, courtId })}`)
 export const createBooking = (input: CreateBookingInput) =>

@@ -8,12 +8,12 @@ async function create(courtId: string, s: string, e: string, extra = {}) {
 describe("POST /api/bookings", () => {
   it("cria com price calculado e status PENDING", async () => {
     const court = await makeCourt({ pricePerHour: "80.00" });
-    const res = await create(court.id, "18:00", "19:30");
+    const res = await create(court.id, "18:00", "20:00");
     expect(res.status).toBe(201);
     expect(res.body.data).toMatchObject({
       courtId: court.id,
       status: "PENDING",
-      price: 120,
+      price: 160,
       customerName: "Ana",
     });
     expect(Date.parse(res.body.data.startsAt)).toBe(Date.parse(at("18:00")));
@@ -26,17 +26,17 @@ describe("POST /api/bookings", () => {
     expect(res.body.data.price).toBe(80);
   });
 
-  it("Decimal 90.55/h x 1.5h = 135.83", async () => {
+  it("Decimal 90.55/h x 2h = 181.10", async () => {
     const court = await makeCourt({ pricePerHour: "90.55" });
-    const res = await create(court.id, "09:00", "10:30");
+    const res = await create(court.id, "09:00", "11:00");
     expect(res.status).toBe(201);
-    expect(res.body.data.price).toBe(135.83);
+    expect(res.body.data.price).toBe(181.1);
   });
 
   it("sobreposição -> 409 BOOKING_CONFLICT", async () => {
     const court = await makeCourt();
     expect((await create(court.id, "18:00", "19:00")).status).toBe(201);
-    const res = await create(court.id, "18:30", "19:30");
+    const res = await create(court.id, "17:00", "19:00");
     expect(res.status).toBe(409);
     expect(res.body.error.code).toBe("BOOKING_CONFLICT");
   });
@@ -44,7 +44,7 @@ describe("POST /api/bookings", () => {
   it("intervalo contido em outro -> 409", async () => {
     const court = await makeCourt();
     await create(court.id, "10:00", "13:00");
-    expect((await create(court.id, "11:00", "11:30")).status).toBe(409);
+    expect((await create(court.id, "11:00", "12:00")).status).toBe(409);
   });
 
   it("adjacente (fim = início) não conflita", async () => {
@@ -68,9 +68,9 @@ describe("POST /api/bookings", () => {
     expect((await create(court.id, "18:00", "19:00")).status).toBe(201);
   });
 
-  it("início fora da grade de 30 min -> 400", async () => {
+  it("início às :30 -> 400", async () => {
     const court = await makeCourt();
-    const res = await create(court.id, "18:15", "19:15");
+    const res = await create(court.id, "18:30", "19:30");
     expect(res.status).toBe(400);
     expect(res.body.error.code).toBe("VALIDATION_ERROR");
     expect(res.body.error.details[0].path).toBe("endsAt");
@@ -84,19 +84,19 @@ describe("POST /api/bookings", () => {
 
   it("início antes das 07:00 -> 400", async () => {
     const court = await makeCourt();
-    expect((await create(court.id, "06:30", "07:30")).status).toBe(400);
+    expect((await create(court.id, "06:00", "07:00")).status).toBe(400);
   });
 
-  it("fim depois das 23:00 -> 400; fim às 23:00 ok; início às 07:00 ok", async () => {
+  it("fim às 23:00 ok; início às 07:00 ok", async () => {
     const court = await makeCourt();
-    expect((await create(court.id, "22:30", "23:30")).status).toBe(400);
     expect((await create(court.id, "22:00", "23:00")).status).toBe(201);
     expect((await create(court.id, "07:00", "08:00")).status).toBe(201);
   });
 
-  it("duração inválida (15 min, 4h30, fim <= início) -> 400; 4h ok", async () => {
+  it("duração inválida (15 min, 90 min, 4h30, fim <= início) -> 400; 4h ok", async () => {
     const court = await makeCourt();
     expect((await create(court.id, "10:00", "10:15")).status).toBe(400);
+    expect((await create(court.id, "10:00", "11:30")).status).toBe(400);
     expect((await create(court.id, "10:00", "14:30")).status).toBe(400);
     expect((await create(court.id, "10:00", "10:00")).status).toBe(400);
     expect((await create(court.id, "11:00", "10:00")).status).toBe(400);
@@ -208,7 +208,7 @@ describe("PATCH /api/bookings/:id/status", () => {
     const first = await create(court.id, "18:00", "19:00");
     const id = first.body.data.id;
     await api().patch(`/api/bookings/${id}/status`).send({ status: "CANCELLED" });
-    const second = await create(court.id, "18:30", "19:30");
+    const second = await create(court.id, "17:00", "19:00");
     expect(second.status).toBe(201);
 
     const res = await api().patch(`/api/bookings/${id}/status`).send({ status: "CONFIRMED" });
